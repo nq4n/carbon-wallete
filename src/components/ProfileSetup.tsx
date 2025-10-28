@@ -14,7 +14,7 @@ import {
   Loader2,
   CheckCircle
 } from 'lucide-react'
-import { toast } from 'sonner@2.0.3'
+import { toast } from 'sonner'
 import greenPulseLogo from 'figma:asset/2c1ec6a90a7fc9cfca4f45b98c3e9ac1918a1565.png'
 
 interface ProfileData {

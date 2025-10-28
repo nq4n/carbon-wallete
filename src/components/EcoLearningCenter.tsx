@@ -29,7 +29,7 @@ import {
   SelectValue 
 } from './ui/select';
 import { Input } from './ui/input';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 
 interface LearningContent {

@@ -56,6 +56,7 @@ import {
 } from "lucide-react";
 import greenPulseLogo from "figma:asset/2c1ec6a90a7fc9cfca4f45b98c3e9ac1918a1565.png";
 import { ImageWithFallback } from "./components/figma/ImageWithFallback";
+import { Toaster } from './components/ui/sonner';
 
 function AppContent() {
   const { user, profile, loading, signOut } = useAuthContext();
@@ -495,6 +496,7 @@ export default function App() {
   return (
     <AuthProvider>
       <AppContent />
+      <Toaster />
     </AuthProvider>
   );
 }

@@ -1,4 +1,5 @@
 'use client';
+import React from 'react';
 
 import { useState } from 'react';
 import { Card } from './ui/card';
@@ -25,7 +26,7 @@ import {
   SelectValue 
 } from './ui/select';
 import { Input } from './ui/input';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 interface Product {
   id: number;
