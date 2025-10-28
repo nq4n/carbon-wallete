@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>المحفظة الكربونية الرقمية - جامعة السلطان قابوس</title>
+    <meta name="description" content="تطبيق ذكي لرصد ومتابعة البصمة الكربونية في حرم جامعة السلطان قابوس">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    
+    <!-- Google Maps API -->
+    <script async defer 
+            src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&libraries=places&language=ar&region=OM">
+    </script>
+    
+    <!-- Preconnect to Google Maps domains for better performance -->
+    <link rel="preconnect" href="https://maps.googleapis.com">
+    <link rel="preconnect" href="https://maps.gstatic.com">
+    
+    <style>
+        /* تحسينات للخريطة */
+        .gm-style-iw {
+            direction: rtl;
+            text-align: right;
+        }
+        
+        .gm-style-iw-d {
+            direction: rtl;
+        }
+        
+        /* تحسين شكل نوافذ المعلومات */
+        .gm-style .gm-style-iw-c {
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+</body>
+</html>
