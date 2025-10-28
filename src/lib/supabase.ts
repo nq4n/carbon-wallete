@@ -9,24 +9,18 @@ declare global {
   }
 }
 
-// Configuration for Supabase
-// Replace these with your actual Supabase project credentials
-const supabaseUrl = `https://${projectId}.supabase.co`
-const supabaseAnonKey = publicAnonKey
 
-// Check if we have real Supabase credentials
-const hasRealCredentials = 
-  !!(projectId && projectId !== "vmseijrfsadkwtdlpvzy") &&
-  !!(publicAnonKey && publicAnonKey !== "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZtc2VpanJmc2Fka3d0ZGxwdnp5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU2ODA0NDcsImV4cCI6MjA3MTI1NjQ0N30.-_Y9agFSdMtu5kkfg64Jwn4rGaBd-djXVCZvVmMidVk")
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// For development/demo purposes, use mock auth when real credentials aren't available
-// For production, you need to:
-// 1. Create a Supabase project at https://supabase.com
-// 2. Replace the URL and key above with your actual project credentials
-// 3. Set up the database tables using the SQL in /database/setup.sql
-export const supabase = hasRealCredentials 
-  ? createClient(supabaseUrl, supabaseAnonKey)
-  : createMockSupabaseClient() as any
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+
+// (اختياري) تحقق إذا القيم حقيقية أم placeholder
+const hasRealCredentials =
+  supabaseUrl && supabaseUrl !== "https://your-project.supabase.co" &&
+  supabaseAnonKey && supabaseAnonKey !== "your-anon-key";
+
+console.log("Using real Supabase credentials:", hasRealCredentials);
 
 // Export a flag to know if we're using mock or real Supabase
 export const isUsingMockAuth = !hasRealCredentials
