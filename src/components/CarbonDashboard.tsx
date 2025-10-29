@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
@@ -17,67 +17,103 @@ import {
   Calendar,
   Trophy
 } from 'lucide-react';
+import { supabase } from "../lib/supabase";
+import { useAuth } from '../hooks/useAuth';
+import ActivityLogger from './ActivityLogger';
 
-interface CarbonData {
-  daily: number;
-  weekly: number;
-  monthly: number;
-  points: number;
-  level: string;
-  rank: number;
-}
+const PAGE_LIMIT = 10;
 
 interface Activity {
   id: string;
-  type: 'transport' | 'energy' | 'waste' | 'food';
+  kind: 'transport' | 'energy' | 'waste' | 'food';
   description: string;
-  carbonSaved: number;
-  pointsEarned: number;
-  date: string;
+  carbon_saved_kg: number;
+  points_earned: number;
+  created_at: string;
+}
+
+interface CarbonData {
+    daily_co2: number;
+    weekly_co2: number;
+    monthly_co2: number;
+    level: string;
+    rank: number;
+    total_carbon_saved_kg: number;
 }
 
 export default function CarbonDashboard() {
-  const [carbonData] = useState<CarbonData>({
-    daily: 4.2,
-    weekly: 28.5,
-    monthly: 120.8,
-    points: 1250,
-    level: 'صديق البيئة',
-    rank: 24
-  });
+  const { user } = useAuth();
+  const [summary,setSummary] = useState<CarbonData | null>(null);
+  const [activities,setActivities] = useState<any[]>([]);
+  const [points,setPoints] = useState<number>(0);
+  const [todayKg, setTodayKg] = useState(0);
+  const [weekKg, setWeekKg] = useState(0);
+  const [monthKg, setMonthKg] = useState(0);
 
-  const [activities] = useState<Activity[]>([
-    {
-      id: '1',
-      type: 'transport',
-      description: 'استخدام الحافلة الجامعية بدلاً من السيارة',
-      carbonSaved: 2.1,
-      pointsEarned: 15,
-      date: '2024-01-15'
-    },
-    {
-      id: '2',
-      type: 'energy',
-      description: 'إطفاء الأنوار في القاعة الدراسية',
-      carbonSaved: 0.5,
-      pointsEarned: 8,
-      date: '2024-01-15'
-    },
-    {
-      id: '3',
-      type: 'waste',
-      description: 'إعادة تدوير 5 زجاجات بلاستيكية',
-      carbonSaved: 1.2,
-      pointsEarned: 12,
-      date: '2024-01-14'
-    }
-  ]);
+  const loadSummary = async () => {
+    if(!user) return;
+    const { data: s } = await supabase
+      .from("v_user_carbon_summary")
+      .select("*")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    setSummary(s);
+  };
+
+  const loadActivities = async () => {
+    if(!user) return;
+    const { data: a } = await supabase
+      .from("activity_logs")
+      .select("id,kind,description,carbon_saved_kg,points_earned,created_at")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending:false })
+      .limit(PAGE_LIMIT);
+    setActivities(a ?? []);
+  };
+
+  const loadPoints = async () => {
+    if(!user) return;
+    const { data: p } = await supabase
+      .from("user_profiles")
+      .select("points")
+      .eq("id", user.id)
+      .maybeSingle();
+    setPoints(p?.points ?? 0);
+  };
+
+  async function totalCarbonSince(s: Date) {
+    if (!user) return 0;
+    const { data, error } = await supabase
+      .from("activity_logs")
+      .select("carbon_saved_kg")
+      .eq("user_id", user.id)
+      .gte("created_at", s.toISOString());
+    if (error) return 0;
+    return (data ?? []).reduce((t,x)=>t+Number(x.carbon_saved_kg||0),0);
+  }
+
+  const reload = async () => {
+    if (!user) return;
+    await Promise.all([loadSummary(), loadActivities(), loadPoints()]);
+
+    const startOfDay = new Date(); startOfDay.setHours(0,0,0,0);
+    const startOfWeek = new Date(); startOfWeek.setDate(startOfWeek.getDate()-startOfWeek.getDay());
+    const startOfMonth = new Date(); startOfMonth.setDate(1);
+
+    totalCarbonSince(startOfDay).then(setTodayKg);
+    totalCarbonSince(startOfWeek).then(setWeekKg);
+    totalCarbonSince(startOfMonth).then(setMonthKg);
+  };
+
+  useEffect(() => {
+    reload();
+  }, [user]);
 
   const weeklyTarget = 35;
-  const weeklyProgress = (carbonData.weekly / weeklyTarget) * 100;
+  const weeklyProgress = (weekKg / weeklyTarget) * 100;
 
-  const getActivityIcon = (type: Activity['type']) => {
-    switch (type) {
+  const getActivityIcon = (kind: Activity['kind']) => {
+    switch (kind) {
       case 'transport': return <Car className="w-4 h-4" />;
       case 'energy': return <Zap className="w-4 h-4" />;
       case 'waste': return <Trash2 className="w-4 h-4" />;
@@ -85,8 +121,8 @@ export default function CarbonDashboard() {
     }
   };
 
-  const getActivityColor = (type: Activity['type']) => {
-    switch (type) {
+  const getActivityColor = (kind: Activity['kind']) => {
+    switch (kind) {
       case 'transport': return 'bg-blue-100 text-blue-700';
       case 'energy': return 'bg-yellow-100 text-yellow-700';
       case 'waste': return 'bg-green-100 text-green-700';
@@ -96,7 +132,6 @@ export default function CarbonDashboard() {
 
   return (
     <div className="space-y-6" dir="rtl">
-      {/* Header with Points and Level */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">المحفظة الكربونية</h1>
@@ -105,21 +140,20 @@ export default function CarbonDashboard() {
         <div className="flex items-center gap-4">
           <Badge variant="secondary" className="text-lg px-4 py-2">
             <Trophy className="w-4 h-4 ml-2" />
-            {carbonData.points} نقطة
+            {points} نقطة
           </Badge>
           <Badge variant="outline" className="text-lg px-4 py-2">
-            {carbonData.level}
+            {summary?.level ?? '...'}
           </Badge>
         </div>
       </div>
 
-      {/* Key Metrics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-muted-foreground">اليوم</p>
-              <p className="text-2xl font-bold">{carbonData.daily} كجم CO₂</p>
+              <p className="text-2xl font-bold">{todayKg.toFixed(1)} كجم CO₂</p>
             </div>
             <div className="p-2 bg-green-100 rounded-lg">
               <TrendingDown className="w-5 h-5 text-green-600" />
@@ -131,7 +165,7 @@ export default function CarbonDashboard() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-muted-foreground">هذا الأسبوع</p>
-              <p className="text-2xl font-bold">{carbonData.weekly} كجم CO₂</p>
+              <p className="text-2xl font-bold">{weekKg.toFixed(1)} كجم CO₂</p>
             </div>
             <div className="p-2 bg-blue-100 rounded-lg">
               <Calendar className="w-5 h-5 text-blue-600" />
@@ -143,7 +177,7 @@ export default function CarbonDashboard() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-muted-foreground">هذا الشهر</p>
-              <p className="text-2xl font-bold">{carbonData.monthly} كجم CO₂</p>
+              <p className="text-2xl font-bold">{monthKg.toFixed(1)} كجم CO₂</p>
             </div>
             <div className="p-2 bg-purple-100 rounded-lg">
               <Leaf className="w-5 h-5 text-purple-600" />
@@ -155,7 +189,7 @@ export default function CarbonDashboard() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-muted-foreground">الترتيب</p>
-              <p className="text-2xl font-bold">#{carbonData.rank}</p>
+              <p className="text-2xl font-bold">#{summary?.rank ?? 0}</p>
             </div>
             <div className="p-2 bg-yellow-100 rounded-lg">
               <Award className="w-5 h-5 text-yellow-600" />
@@ -164,7 +198,6 @@ export default function CarbonDashboard() {
         </Card>
       </div>
 
-      {/* Weekly Progress */}
       <Card className="p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
@@ -172,16 +205,15 @@ export default function CarbonDashboard() {
             <h3 className="font-semibold">الهدف الأسبوعي</h3>
           </div>
           <span className="text-sm text-muted-foreground">
-            {carbonData.weekly} / {weeklyTarget} كجم CO₂
+            {(summary?.total_carbon_saved_kg ?? 0).toFixed(1)} / {weeklyTarget} كجم CO₂
           </span>
         </div>
         <Progress value={weeklyProgress} className="h-3" />
         <p className="text-sm text-muted-foreground mt-2">
-          {weeklyProgress > 100 ? 'تجاوزت هدفك!' : `${(weeklyTarget - carbonData.weekly).toFixed(1)} كجم متبقية للوصول للهدف`}
+          {weeklyProgress > 100 ? 'تجاوزت هدفك!' : `${(weeklyTarget - (summary?.total_carbon_saved_kg ?? 0)).toFixed(1)} كجم متبقية للوصول للهدف`}
         </p>
       </Card>
 
-      {/* Tabs for Activities and Statistics */}
       <Tabs defaultValue="activities" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="activities">الأنشطة الأخيرة</TabsTrigger>
@@ -195,17 +227,17 @@ export default function CarbonDashboard() {
               {activities.map((activity) => (
                 <div key={activity.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
                   <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-full ${getActivityColor(activity.type)}`}>
-                      {getActivityIcon(activity.type)}
+                    <div className={`p-2 rounded-full ${getActivityColor(activity.kind)}`}>
+                      {getActivityIcon(activity.kind)}
                     </div>
                     <div>
                       <p className="font-medium">{activity.description}</p>
                       <p className="text-sm text-muted-foreground">
-                        وفرت {activity.carbonSaved} كجم CO₂
+                        وفرت {activity.carbon_saved_kg} كجم CO₂
                       </p>
                     </div>
                   </div>
-                  <Badge variant="secondary">+{activity.pointsEarned} نقطة</Badge>
+                  <Badge variant="secondary">+{activity.points_earned} نقطة</Badge>
                 </div>
               ))}
             </div>
@@ -241,12 +273,8 @@ export default function CarbonDashboard() {
         </TabsContent>
       </Tabs>
 
-      {/* Action Buttons */}
       <div className="flex gap-4">
-        <Button className="flex-1">
-          <Leaf className="w-4 h-4 ml-2" />
-          سجل نشاط جديد
-        </Button>
+        <ActivityLogger onSaved={reload} />
         <Button variant="outline" className="flex-1">
           <Award className="w-4 h-4 ml-2" />
           استبدل النقاط

@@ -10,6 +10,9 @@ import { Textarea } from './ui/textarea';
 import { Badge } from './ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from './ui/dialog';
 import QRScanner from './QRScanner';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../hooks/useAuth';
+import { toast } from 'sonner';
 import { 
   Car, 
   Zap, 
@@ -75,7 +78,8 @@ const activityTypes = [
   }
 ];
 
-export default function ActivityLogger() {
+export default function ActivityLogger({ onSaved }: { onSaved: () => void }) {
+  const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [isQRScannerOpen, setIsQRScannerOpen] = useState(false);
   const [form, setForm] = useState<ActivityForm>({
@@ -117,7 +121,6 @@ export default function ActivityLogger() {
   };
 
   const handleQRScanResult = (qrData: any) => {
-    // Fill form with QR scan data
     setForm({
       type: qrData.type,
       description: qrData.description,
@@ -128,12 +131,10 @@ export default function ActivityLogger() {
       verified: qrData.verified
     });
 
-    // Set calculated impact directly from QR data
     const carbonSaved = qrData.carbonFactor;
     const pointsEarned = Math.round(carbonSaved * 10);
     setCalculatedImpact({ carbonSaved, pointsEarned });
 
-    // Set selected option for consistency
     setSelectedOption({
       label: qrData.description,
       carbonFactor: qrData.carbonFactor
@@ -143,16 +144,32 @@ export default function ActivityLogger() {
     setIsOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (calculatedImpact) {
-      // Here you would normally save to backend
-      console.log('Activity logged:', { form, impact: calculatedImpact });
-      setIsOpen(false);
-      setForm({ type: '', description: '', amount: '', unit: '' });
-      setSelectedOption(null);
-      setCalculatedImpact(null);
+    if (!calculatedImpact || !user) return;
+
+    const { error } = await supabase.rpc("log_activity_and_earn", {
+        p_user_id: user.id,
+        p_kind: form.type,
+        p_description: form.description,
+        p_amount: Number(form.amount) || 1,
+        p_unit: form.unit || "unit",
+        p_carbon_factor: selectedOption?.carbonFactor || 0,
+        p_points: calculatedImpact.pointsEarned || 0,
+        p_location: form.location || null,
+        p_catalog_id: null,
+        p_verified: form.verified || false,
+    });
+
+    if (error) {
+        toast.error(error.message);
+        return;
     }
+
+    toast.success("تم تسجيل النشاط");
+    onSaved();
+    setIsOpen(false);
+    resetForm();
   };
 
   const resetForm = () => {
@@ -171,7 +188,6 @@ export default function ActivityLogger() {
   return (
     <>
       <div className="flex gap-2">
-        {/* Regular Activity Logger Button */}
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
             <Button onClick={resetForm}>
@@ -189,7 +205,6 @@ export default function ActivityLogger() {
             </DialogHeader>
             
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* QR Scanned Badge */}
               {form.qrScanned && (
                 <div className="flex items-center justify-center">
                   <Badge className="bg-green-600 text-white px-4 py-2">
@@ -202,19 +217,13 @@ export default function ActivityLogger() {
                 </div>
               )}
 
-              {/* Location (if from QR) */}
               {form.location && (
                 <div className="space-y-2">
                   <Label>الموقع</Label>
-                  <Input
-                    value={form.location}
-                    disabled
-                    className="bg-muted"
-                  />
+                  <Input value={form.location} disabled className="bg-muted" />
                 </div>
               )}
 
-              {/* Activity Type Selection - only show if not from QR */}
               {!form.qrScanned && (
                 <div className="space-y-3">
                   <Label>نوع النشاط</Label>
@@ -240,7 +249,6 @@ export default function ActivityLogger() {
                 </div>
               )}
 
-              {/* Activity Options - only show if not from QR */}
               {form.type && !form.qrScanned && (
                 <div className="space-y-3">
                   <Label>تفاصيل النشاط</Label>
@@ -259,19 +267,13 @@ export default function ActivityLogger() {
                 </div>
               )}
 
-              {/* Description (if from QR) */}
               {form.qrScanned && form.description && (
                 <div className="space-y-2">
                   <Label>النشاط</Label>
-                  <Input
-                    value={form.description}
-                    disabled
-                    className="bg-muted"
-                  />
+                  <Input value={form.description} disabled className="bg-muted" />
                 </div>
               )}
 
-              {/* Amount Input */}
               {(selectedOption || form.qrScanned) && (
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -288,11 +290,7 @@ export default function ActivityLogger() {
                   <div className="space-y-2">
                     <Label>الوحدة</Label>
                     {form.qrScanned ? (
-                      <Input
-                        value={form.unit}
-                        disabled
-                        className="bg-muted"
-                      />
+                      <Input value={form.unit} disabled className="bg-muted" />
                     ) : (
                       <Select onValueChange={(value) => setForm(prev => ({ ...prev, unit: value }))}>
                         <SelectTrigger>
@@ -310,7 +308,6 @@ export default function ActivityLogger() {
                 </div>
               )}
 
-              {/* Calculate Impact Button - only for manual entries */}
               {selectedOption && form.amount && form.unit && !form.qrScanned && (
                 <Button 
                   type="button" 
@@ -323,7 +320,6 @@ export default function ActivityLogger() {
                 </Button>
               )}
 
-              {/* Calculated Impact Display */}
               {calculatedImpact && (
                 <Card className="p-4 bg-green-50 border-green-200">
                   <div className="flex items-center justify-between">
@@ -343,7 +339,6 @@ export default function ActivityLogger() {
                 </Card>
               )}
 
-              {/* Additional Notes */}
               <div className="space-y-2">
                 <Label>ملاحظات إضافية (اختياري)</Label>
                 <Textarea
@@ -355,7 +350,6 @@ export default function ActivityLogger() {
                 />
               </div>
 
-              {/* Submit Button */}
               <div className="flex gap-3">
                 <Button 
                   type="submit" 
@@ -376,7 +370,6 @@ export default function ActivityLogger() {
           </DialogContent>
         </Dialog>
 
-        {/* QR Scanner Button */}
         <Button 
           variant="outline"
           onClick={() => setIsQRScannerOpen(true)}
@@ -386,7 +379,6 @@ export default function ActivityLogger() {
         </Button>
       </div>
 
-      {/* QR Scanner Component */}
       <QRScanner
         isOpen={isQRScannerOpen}
         onClose={() => setIsQRScannerOpen(false)}
