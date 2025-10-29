@@ -27,7 +27,6 @@ import {
 } from './ui/select';
 import { toast } from 'sonner';
 import GoogleMapComponent from './GoogleMapComponent';
-import MapInstructions from './MapInstructions';
 
 interface Location {
   id: number;
@@ -481,8 +480,6 @@ export default function InteractiveMap() {
           </div>
         </Card>
 
-        {/* تعليمات الإعداد */}
-        <MapInstructions />
       </div>
     </div>
   );
