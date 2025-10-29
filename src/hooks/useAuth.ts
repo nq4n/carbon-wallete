@@ -1,192 +1,171 @@
-import { useEffect, useState } from 'react'
-import { User, Session } from '@supabase/supabase-js'
-import { supabase, isUsingMockAuth } from '../lib/supabase'
-import { MockUser, MockSession, MockUserProfile } from '../lib/mockAuth'
+import { useEffect, useState } from "react";
+import type { User, Session } from "@supabase/supabase-js";
+import { supabase, isUsingMockAuth } from "../lib/supabase";
+import type { MockUser, MockSession, MockUserProfile } from "../lib/mockAuth";
 
 export interface UserProfile {
-  id: string
-  name: string
-  email: string
-  user_type: 'student' | 'employee'
-  university_id: string
-  department: string
-  points: number
-  avatar_url?: string
-  created_at: string
+  id: string;
+  name: string;
+  email: string;
+  user_type: "student" | "employee";
+  university_id: string;
+  department: string;
+  points: number;
+  avatar_url?: string;
+  created_at: string;
 }
 
 export function useAuth() {
-  const [user, setUser] = useState<User | MockUser | null>(null)
-  const [profile, setProfile] = useState<UserProfile | MockUserProfile | null>(null)
-  const [session, setSession] = useState<Session | MockSession | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [user, setUser] = useState<User | MockUser | null>(null);
+  const [profile, setProfile] = useState<UserProfile | MockUserProfile | null>(null);
+  const [session, setSession] = useState<Session | MockSession | null>(null);
+  const [loading, setLoading] = useState(true); // جاهزية الواجهة
 
+  // تهيئة جلسة التوثيق مرة واحدة
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      setUser(session?.user ?? null)
-      if (session?.user) {
-        fetchUserProfile(session.user.id)
-      } else {
-        setLoading(false)
-      }
-    })
+    let mounted = true;
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setSession(session)
-        setUser(session?.user ?? null)
-        
-        if (session?.user) {
-          await fetchUserProfile(session.user.id)
-        } else {
-          setProfile(null)
-          setLoading(false)
+    (async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!mounted) return;
+      setSession(data.session ?? null);
+      setUser(data.session?.user ?? null);
+      setLoading(false); // لا تنتظر جلب البروفايل
+    })();
+
+    const { data: sub } = supabase.auth.onAuthStateChange((_ev, sess) => {
+      setSession(sess ?? null);
+      setUser(sess?.user ?? null);
+      setLoading(false);
+    });
+
+    return () => {
+      mounted = false;
+      sub.subscription.unsubscribe();
+    };
+  }, []);
+
+  // جلب البروفايل عند تغيّر المستخدم
+  useEffect(() => {
+    let aborted = false;
+    async function fetchProfile(uid: string) {
+      try {
+        const { data, error } = await supabase
+          .from("user_profiles")
+          .select("*")
+          .eq("id", uid)
+          .maybeSingle(); // لا يرمي خطأ عند عدم وجود صف
+
+        if (aborted) return;
+
+        if (error && error.code !== "PGRST116") {
+          console.warn("profile load error:", error);
+          setProfile(null);
+          return;
+        }
+        setProfile(data ?? null); // قد يكون null مباشرة بعد التسجيل حتى يعمل التريغر
+      } catch (err) {
+        if (!aborted) {
+          console.warn("profile fetch exception:", err);
+          setProfile(null);
         }
       }
-    )
-
-    return () => subscription.unsubscribe()
-  }, [])
-
-  const fetchUserProfile = async (userId: string) => {
-    try {
-      console.log('Fetching profile for user:', userId, 'Using mock auth:', isUsingMockAuth)
-      
-      const result = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('id', userId)
-        .single()
-
-      console.log('Profile fetch result:', result)
-      const { data, error } = result
-
-      if (error && error.code === 'PGRST116') {
-        // Profile doesn't exist, this is normal for new users
-        console.log('No profile found for user, this is normal for new users')
-        setLoading(false)
-        return
-      }
-
-      if (error) {
-        console.error('Error fetching profile:', error)
-      } else {
-        console.log('Profile fetched successfully:', data)
-        setProfile(data)
-      }
-    } catch (error) {
-      console.error('Error fetching profile:', error)
-    } finally {
-      setLoading(false)
     }
-  }
 
+    if (user?.id) fetchProfile(user.id);
+    else setProfile(null);
+
+    return () => {
+      aborted = true;
+    };
+  }, [user?.id]);
+
+  // تسجيل الدخول
   const signIn = async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({
-      email,
+      email: email.trim(),
       password,
-    })
-    return { data, error }
-  }
+    });
+    if (error) console.error("login error:", { status: error.status, name: error.name, message: error.message });
+    return { data, error };
+  };
 
-  const signUp = async (email: string, password: string, userData: {
-    name: string
-    user_type: 'student' | 'employee'
-    university_id: string
-    department: string
-  }) => {
+  // إنشاء حساب (التريغر ينشئ صف user_profiles تلقائيًا)
+  const signUp = async (
+    email: string,
+    password: string,
+    userData: {
+      name: string;
+      user_type: "student" | "employee";
+      university_id: string;
+      department: string;
+    }
+  ) => {
     const { data, error } = await supabase.auth.signUp({
-      email,
+      email: email.trim(),
       password,
-      options: {
-        data: userData
-      }
-    })
-    
-    return { data, error }
-  }
+      options: { data: userData }, // يمر إلى raw_user_meta_data لاستخدامه في التريغر
+    });
+    if (error) console.error("signup error:", { status: error.status, name: error.name, message: error.message });
+    return { data, error };
+  };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut()
-    return { error }
-  }
+    const { error } = await supabase.auth.signOut();
+    return { error };
+  };
 
-  const createProfile = async (userData: Omit<UserProfile, 'created_at' | 'points'>) => {
+  // إدخال/تعديل بروفايل يدويًا (يستخدم سياسة insert/update مع id = auth.uid())
+  const createProfile = async (userData: Omit<UserProfile, "created_at" | "points">) => {
     try {
-      console.log('Creating profile with data:', userData, 'Using mock auth:', isUsingMockAuth)
-      
-      const result = await supabase
-        .from('user_profiles')
-        .insert([{
-          ...userData,
-          points: 0
-        }])
-        .select()
-        .single()
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) return { data: null, error: new Error("No user") };
 
-      console.log('Profile creation result:', result)
-      const { data, error } = result
-
-      if (data) {
-        console.log('Profile created successfully:', data)
-        setProfile(data)
-      }
+      const payload = { ...userData, id: u.user.id, points: 0 };
+      const { data, error } = await supabase.from("user_profiles").insert([payload]).select().maybeSingle();
 
       if (error) {
-        console.error('Error in createProfile:', error)
+        console.error("createProfile error:", error);
+        return { data: null, error };
       }
-
-      return { data, error }
-    } catch (error) {
-      console.error('Error creating profile:', error)
-      return { data: null, error }
+      setProfile(data as any);
+      return { data, error: null };
+    } catch (e: any) {
+      console.error("createProfile exception:", e);
+      return { data: null, error: e };
     }
-  }
+  };
 
   const updateProfile = async (updates: Partial<UserProfile | MockUserProfile>) => {
-    if (!user) return { data: null, error: new Error('No user logged in') }
+    const id = (user as any)?.id;
+    if (!id) return { data: null, error: new Error("No user logged in") };
 
     try {
-      let result;
-      
-      if (isUsingMockAuth) {
-        // Use mock database
-        result = await supabase.from('user_profiles').update(updates).eq('id', user.id).select().single()
-      } else {
-        // Use real Supabase
-        result = await supabase
-          .from('user_profiles')
-          .update(updates)
-          .eq('id', user.id)
-          .select()
-          .single()
-      }
+      const { data, error } = await supabase
+        .from("user_profiles")
+        .update(updates)
+        .eq("id", id)
+        .select()
+        .maybeSingle();
 
-      const { data, error } = result
-
-      if (data) {
-        setProfile(data)
-      }
-
-      return { data, error }
-    } catch (error) {
-      console.error('Error updating profile:', error)
-      return { data: null, error }
+      if (error) return { data: null, error };
+      if (data) setProfile(data as any);
+      return { data, error: null };
+    } catch (e: any) {
+      console.error("updateProfile exception:", e);
+      return { data: null, error: e };
     }
-  }
+  };
 
   return {
     user,
     profile,
     session,
-    loading,
+    loading, // استخدمه لحماية الواجهات: إن كان true اعرض nothing/Spinner بسيط
     signIn,
     signUp,
     signOut,
     createProfile,
-    updateProfile
-  }
+    updateProfile,
+  };
 }

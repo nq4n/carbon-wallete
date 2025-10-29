@@ -46,7 +46,7 @@ export default function LoginForm() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
-
+  const [busy, setBusy] = useState(false);
   const [loginData, setLoginData] = useState<LoginData>({
     email: '',
     password: ''
@@ -65,6 +65,7 @@ export default function LoginForm() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
+    if (isSubmitting) return;
     setError('')
 
     try {
@@ -89,6 +90,7 @@ export default function LoginForm() {
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
+    if (isSubmitting) return; 
     setError('')
 
     if (signUpData.password !== signUpData.confirmPassword) {
