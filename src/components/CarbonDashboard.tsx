@@ -15,7 +15,8 @@ import {
   TrendingDown, 
   Target,
   Calendar,
-  Trophy
+  Trophy,
+  CheckCircle
 } from 'lucide-react';
 import { supabase } from "../lib/supabase";
 import { useAuth } from '../hooks/useAuth';
@@ -41,6 +42,15 @@ interface CarbonData {
     total_carbon_saved_kg: number;
 }
 
+interface Challenge {
+  id: string;
+  title: string;
+  description: string;
+  due_date: string;
+  points_reward: number;
+  is_completed: boolean;
+}
+
 export default function CarbonDashboard() {
   const { user } = useAuth();
   const [summary,setSummary] = useState<CarbonData | null>(null);
@@ -49,6 +59,7 @@ export default function CarbonDashboard() {
   const [todayKg, setTodayKg] = useState(0);
   const [weekKg, setWeekKg] = useState(0);
   const [monthKg, setMonthKg] = useState(0);
+  const [challenges, setChallenges] = useState<Challenge[]>([]);
 
   const loadSummary = async () => {
     if(!user) return;
@@ -81,6 +92,38 @@ export default function CarbonDashboard() {
     setPoints(p?.points ?? 0);
   };
 
+  const loadChallenges = async () => {
+    if (!user) return;
+
+    const { data: challengesData, error: challengesError } = await supabase
+      .from('challenges')
+      .select('*');
+
+    if (challengesError) {
+      console.error('Error fetching challenges:', challengesError);
+      return;
+    }
+
+    const { data: completedChallengesData, error: completedChallengesError } = await supabase
+      .from('user_completed_challenges')
+      .select('challenge_id')
+      .eq('user_id', user.id);
+
+    if (completedChallengesError) {
+      console.error('Error fetching completed challenges:', completedChallengesError);
+      return;
+    }
+
+    const completedChallengeIds = new Set(completedChallengesData.map(c => c.challenge_id));
+
+    const formattedChallenges = challengesData.map(c => ({
+      ...c,
+      is_completed: completedChallengeIds.has(c.id),
+    }));
+
+    setChallenges(formattedChallenges);
+  };
+
   async function totalCarbonSince(s: Date) {
     if (!user) return 0;
     const { data, error } = await supabase
@@ -94,7 +137,7 @@ export default function CarbonDashboard() {
 
   const reload = async () => {
     if (!user) return;
-    await Promise.all([loadSummary(), loadActivities(), loadPoints()]);
+    await Promise.all([loadSummary(), loadActivities(), loadPoints(), loadChallenges()]);
 
     const startOfDay = new Date(); startOfDay.setHours(0,0,0,0);
     const startOfWeek = new Date(); startOfWeek.setDate(startOfWeek.getDate()-startOfWeek.getDay());
@@ -128,6 +171,16 @@ export default function CarbonDashboard() {
       case 'waste': return 'bg-green-100 text-green-700';
       case 'food': return 'bg-orange-100 text-orange-700';
     }
+  };
+
+  const daysRemaining = (dueDate: string) => {
+    if (!dueDate) return null;
+    const due = new Date(dueDate);
+    const today = new Date();
+    const diffTime = due.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    if (diffDays < 0) return 'انتهى';
+    return `${diffDays} أيام متبقية`;
   };
 
   return (
@@ -246,29 +299,28 @@ export default function CarbonDashboard() {
 
         <TabsContent value="challenges" className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card className="p-4">
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="font-semibold">تحدي الأسبوع</h4>
-                <Badge variant="outline">7 أيام متبقية</Badge>
-              </div>
-              <p className="text-sm text-muted-foreground mb-3">
-                استخدم وسائل النقل المستدامة لمدة 5 أيام
-              </p>
-              <Progress value={60} className="h-2" />
-              <p className="text-xs text-muted-foreground mt-2">3/5 أيام مكتملة</p>
-            </Card>
-
-            <Card className="p-4">
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="font-semibold">تحدي إعادة التدوير</h4>
-                <Badge variant="outline">3 أيام متبقية</Badge>
-              </div>
-              <p className="text-sm text-muted-foreground mb-3">
-                أعد تدوير 10 عبوات هذا الأسبوع
-              </p>
-              <Progress value={80} className="h-2" />
-              <p className="text-xs text-muted-foreground mt-2">8/10 عبوات</p>
-            </Card>
+            {challenges.map((challenge) => (
+              <Card key={challenge.id} className={`p-4 ${challenge.is_completed ? 'bg-green-50' : ''}`}>
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-semibold">{challenge.title}</h4>
+                  {challenge.is_completed ? (
+                    <Badge className="bg-green-600 text-white">
+                      <CheckCircle className="w-4 h-4 ml-1" />
+                      مكتمل
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline">{daysRemaining(challenge.due_date)}</Badge>
+                  )}
+                </div>
+                <p className="text-sm text-muted-foreground mb-3">
+                  {challenge.description}
+                </p>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-bold text-green-600">+{challenge.points_reward} نقطة</span>
+                  {!challenge.is_completed && <Button size="sm">إكمال التحدي</Button>}
+                </div>
+              </Card>
+            ))}
           </div>
         </TabsContent>
       </Tabs>
