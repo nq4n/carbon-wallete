@@ -2,7 +2,8 @@
 import type { FC, ReactNode } from "react";
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { toast } from 'sonner';
-import { useJsApiLoader, GoogleMap } from '@react-google-maps/api';
+import { useJsApiLoader, GoogleMap, MarkerF } from '@react-google-maps/api';
+import { LIBRARIES } from "../config/maps";
 
 interface Location {
   id: number;
@@ -69,12 +70,11 @@ export default function GoogleMapComponent({
 }: GoogleMapComponentProps) {
 
   const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: "YOUR_GOOGLE_MAPS_API_KEY",
-    libraries: ['marker'],
+    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_KEY as string,
+    libraries: LIBRARIES,
   });
 
   const googleMapRef = useRef<google.maps.Map | null>(null);
-  const markersRef = useRef<google.maps.Marker[]>([]);
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
 
   const onMapLoad = useCallback((map: google.maps.Map) => {
@@ -85,8 +85,6 @@ export default function GoogleMapComponent({
   const onMapUnmount = useCallback(() => {
     googleMapRef.current = null;
     infoWindowRef.current = null;
-    markersRef.current.forEach(marker => marker.setMap(null));
-    markersRef.current = [];
   }, []);
 
   useEffect(() => {
@@ -157,46 +155,9 @@ export default function GoogleMapComponent({
   };
 
   useEffect(() => {
-    if (isLoaded && googleMapRef.current) {
-      // Clear previous markers
-      markersRef.current.forEach(marker => marker.setMap(null));
-      markersRef.current = [];
-
-      // Create new markers
-      locations.forEach((location) => {
-        const marker = new google.maps.Marker({
-          position: location.coordinates,
-          map: googleMapRef.current,
-          title: location.name,
-          icon: {
-            url: getMarkerIcon(location.type),
-            scaledSize: new google.maps.Size(32, 32),
-            anchor: new google.maps.Point(16, 32)
-          },
-          animation: google.maps.Animation.DROP
-        });
-
-        marker.addListener('click', () => {
-          onLocationSelect(location);
-          showInfoWindow(marker, location);
-        });
-        
-        markersRef.current.push(marker);
-      });
-    }
-  }, [isLoaded, locations, onLocationSelect]);
-
-  useEffect(() => {
     if (selectedLocation && googleMapRef.current) {
-      googleMapRef.current.panTo(selectedLocation.coordinates);
-      googleMapRef.current.setZoom(18);
-      
-      const marker = markersRef.current.find(
-        (m) => m.getTitle() === selectedLocation.name
-      );
-      if (marker) {
-        showInfoWindow(marker, selectedLocation);
-      }
+        googleMapRef.current.panTo(selectedLocation.coordinates);
+        googleMapRef.current.setZoom(18);
     }
   }, [selectedLocation]);
 
@@ -218,7 +179,23 @@ export default function GoogleMapComponent({
           options={mapOptions}
           onLoad={onMapLoad}
           onUnmount={onMapUnmount}
-        />
+        >
+            {locations.map(location => (
+                <MarkerF 
+                    key={location.id} 
+                    position={location.coordinates}
+                    icon={{
+                        url: getMarkerIcon(location.type),
+                        scaledSize: new google.maps.Size(32, 32),
+                        anchor: new google.maps.Point(16, 32)
+                    }}
+                    onClick={(e) => {
+                        onLocationSelect(location)
+                        // showInfoWindow(?, location)
+                    }}
+                />
+            ))}
+        </GoogleMap>
       ) : (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-100 rounded-lg">
           <div className="text-center space-y-3">

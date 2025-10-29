@@ -278,7 +278,9 @@ function AppContent() {
                   إليك نظرة عامة على نشاطك البيئي اليوم
                 </p>
               </div>
-              <ActivityLogger />
+              <ActivityLogger onSaved={() => {
+                  window.location.reload();
+              }} />
             </div>
             <CarbonDashboard />
           </TabsContent>
@@ -491,7 +493,6 @@ function AppContent() {
     </div>
   );
 }
-
 export default function App() {
   return (
     <AuthProvider>
