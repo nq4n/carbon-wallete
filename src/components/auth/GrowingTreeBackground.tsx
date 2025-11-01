@@ -1,13 +1,15 @@
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 type Props = {
   color?: string;
+  hoverColor?: string;
   lineWidth?: number;
   speed?: number;
   density?: number;
   fade?: number;
   zIndex?: number;
+  isAnimating: boolean;
 };
 
 type Branch = {
@@ -20,14 +22,30 @@ type Branch = {
 
 export default function GrowingTreeBackground({
   color = "rgba(34,139,34,0.7)",
+  hoverColor = "rgba(52, 211, 153, 0.8)", // A brighter green
   lineWidth = 1.2,
   speed = 0.9,
   density = 8,
   fade = 0.06,
   zIndex = -1,
+  isAnimating,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const rafRef = useRef<number | null>(null);
+  const [isHovering, setIsHovering] = useState(false);
+
+  useEffect(() => {
+    const handleMouseMove = () => setIsHovering(true);
+    const handleMouseLeave = () => setIsHovering(false);
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseleave", handleMouseLeave);
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseleave", handleMouseLeave);
+    };
+  }, []);
 
   useEffect(() => {
     const c = canvasRef.current!;
@@ -95,11 +113,24 @@ export default function GrowingTreeBackground({
     ctx.fillRect(0, 0, width, height);
 
     const step = () => {
+        if (!isAnimating) {
+            ctx.fillStyle = `rgba(255,255,255,${fade * 2.5})`;
+            ctx.fillRect(0, 0, width, height);
+            if (branches.length > 0) {
+                 rafRef.current = requestAnimationFrame(step);
+            } else {
+                // Clear the canvas completely when animation stops
+                ctx.clearRect(0, 0, width, height);
+            }
+            return;
+        }
+
+
       ctx.fillStyle = `rgba(255,255,255,${fade * 0.5})`;
       ctx.fillRect(0, 0, width, height);
 
       ctx.beginPath();
-      ctx.strokeStyle = color;
+      ctx.strokeStyle = isHovering ? hoverColor : color;
       ctx.lineWidth = lineWidth;
 
       const newBranches: Branch[] = [];
@@ -119,9 +150,9 @@ export default function GrowingTreeBackground({
         ctx.lineTo(x2, y2);
         b.grown += grow;
 
-        b.angle += (rand() - 0.5) * 0.06; // Less curvy
+        b.angle += (rand() - 0.5) * 0.06;
 
-        if (b.life > 0 && rand() < 0.01) { // Lower split chance
+        if (b.life > 0 && rand() < 0.01) {
           const split = (spread: number) => ({
             x: x2,
             y: y2,
@@ -139,7 +170,6 @@ export default function GrowingTreeBackground({
 
       const alive: Branch[] = [];
       for (const b of branches) {
-          // Keep branch alive if it hasn't finished growing AND is within bounds
           if (b.grown < b.length && b.x > -100 && b.x < width + 100 && b.y > -100 && b.y < height + 100) {
               alive.push(b);
           }
@@ -148,7 +178,7 @@ export default function GrowingTreeBackground({
       branches.length = 0;
       branches.push(...alive, ...newBranches);
 
-      if (branches.length < density * 2.0) {
+      if (branches.length < density * 2.0 && isAnimating) {
         spawnSeed();
       }
 
@@ -161,7 +191,7 @@ export default function GrowingTreeBackground({
       window.removeEventListener("resize", handleResize);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [color, lineWidth, speed, density, fade]);
+  }, [isAnimating, color, hoverColor, lineWidth, speed, density, fade, isHovering]);
 
   return (
     <canvas
@@ -173,6 +203,8 @@ export default function GrowingTreeBackground({
         height: "100vh",
         zIndex,
         pointerEvents: "none",
+        opacity: isAnimating ? 1 : 0,
+        transition: 'opacity 500ms ease-in-out',
       }}
     />
   );

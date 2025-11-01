@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from "react";
-import { supabase } from "./lib/supabase"; // Make sure to import supabase client
+import { supabase } from "./lib/supabase";
 import {
   AuthProvider,
   useAuthContext,
@@ -65,15 +65,12 @@ function AppContent() {
     if (!user || !profile) return;
 
     const fetchProfileData = async () => {
-      // Fetch rank and other stats from the RPC function
       const { data: insights } = await supabase.rpc('get_user_stats', { p_user_id: user.id });
       
-      // Fetch total users
       const { count } = await supabase
         .from('user_profiles')
         .select('*', { count: 'exact', head: true });
 
-      // Fetch current goal
       const { data: goal } = await supabase
         .from('carbon_goals')
         .select('title')
@@ -115,7 +112,7 @@ function AppContent() {
     name: profile.name,
     id: profile.university_id,
     department: profile.department,
-    level: profile.level || "مبتدئ", // from DB
+    level: profile.level || "مبتدئ",
     points: profile.points,
     type: profile.user_type,
   };

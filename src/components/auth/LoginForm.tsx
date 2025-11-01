@@ -50,7 +50,7 @@ export default function LoginForm() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
-  const [busy, setBusy] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(true);
   const [loginData, setLoginData] = useState<LoginData>({
     email: '',
     password: ''
@@ -71,6 +71,7 @@ export default function LoginForm() {
     setIsSubmitting(true)
     if (isSubmitting) return;
     setError('')
+    setIsAnimating(false);
 
     try {
       const { data, error } = await signIn(loginData.email, loginData.password)
@@ -80,12 +81,14 @@ export default function LoginForm() {
           ? 'بيانات تسجيل الدخول غير صحيحة'
           : 'حدث خطأ في تسجيل الدخول'
         )
+        setIsAnimating(true);
       } else {
         toast.success('تم تسجيل الدخول بنجاح!')
       }
     } catch (err) {
       setError('حدث خطأ غير متوقع')
       console.error('Login error:', err)
+      setIsAnimating(true);
     } finally {
       setIsSubmitting(false)
     }
@@ -96,16 +99,19 @@ export default function LoginForm() {
     setIsSubmitting(true)
     if (isSubmitting) return; 
     setError('')
+    setIsAnimating(false);
 
     if (signUpData.password !== signUpData.confirmPassword) {
       setError('كلمات المرور غير متطابقة')
       setIsSubmitting(false)
+      setIsAnimating(true);
       return
     }
 
     if (signUpData.password.length < 6) {
       setError('كلمة المرور يجب أن تكون 6 أحرف على الأقل')
       setIsSubmitting(false)
+      setIsAnimating(true);
       return
     }
 
@@ -126,8 +132,8 @@ export default function LoginForm() {
           ? 'هذا البريد الإلكتروني مسجل مسبقاً'
           : 'حدث خطأ في إنشاء الحساب'
         )
+        setIsAnimating(true);
       } else if (data.user) {
-        // Create profile after successful signup
         await createProfile({
           id: data.user.id,
           email: signUpData.email,
@@ -142,6 +148,7 @@ export default function LoginForm() {
     } catch (err) {
       setError('حدث خطأ غير متوقع')
       console.error('SignUp error:', err)
+      setIsAnimating(true);
     } finally {
       setIsSubmitting(false)
     }
@@ -177,55 +184,17 @@ export default function LoginForm() {
   return (
     <>
     <GrowingTreeBackground
-        color="rgba(21,128,61,0.75)" // Tailwind emerald-700-ish
+        isAnimating={isAnimating}
+        color="rgba(21,128,61,0.75)"
+        hoverColor="rgba(34, 197, 94, 0.8)"
         lineWidth={1.3}
         speed={1.1}
         density={12}
-        maxBranches={2200}
         fade={0.06}
       />
     <div className="min-h-screen w-full grid grid-cols-1 lg:grid-cols-2" dir="rtl">
-      {/* Right Side: Informational Content */}
-      <div className="hidden lg:flex flex-col items-center justify-center bg-gradient-to-br from-green-500 to-emerald-600 p-12 text-white">
-        <div className="max-w-md text-center">
-          <ImageWithFallback 
-              src={greenPulseLogo} 
-              alt="Green Pulse Logo" 
-              className="w-24 h-24 object-contain mx-auto mb-6"
-            />
-          <h1 className="text-4xl font-bold mb-4">المحفظة الرقمية الكربونية</h1>
-          <p className="text-lg mb-8 text-green-100">جامعة السلطان قابوس</p>
-
-          <div className="space-y-6 text-right">
-            <div className="flex items-start gap-4">
-              <div className="bg-white/20 p-2 rounded-full"><Leaf className="w-6 h-6 text-white"/></div>
-              <div>
-                <h3 className="font-semibold">تعزيز الوعي البيئي</h3>
-                <p className="text-sm text-green-200">زيادة الوعي بأهمية تقليل البصمة الكربونية.</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-4">
-              <div className="bg-white/20 p-2 rounded-full"><Users className="w-6 h-6 text-white"/></div>
-              <div>
-                <h3 className="font-semibold">تشجيع المشاركة المجتمعية</h3>
-                <p className="text-sm text-green-200">تحفيز الطلاب والموظفين على تبني ممارسات صديقة للبيئة.</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-4">
-              <div className="bg-white/20 p-2 rounded-full"><Award className="w-6 h-6 text-white"/></div>
-              <div>
-                <h3 className="font-semibold">مكافأة السلوكيات الإيجابية</h3>
-                <p className="text-sm text-green-200">كسب النقاط والمكافآت من خلال المشاركة في الأنشطة البيئية.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Left Side: Login/Sign Up Form */}
       <div className="bg-white flex items-center justify-center p-4">
         <Card className="w-full max-w-md p-6 lg:p-8 shadow-2xl border-none">
-          {/* Logo and Header for mobile */}
           <div className="text-center mb-6 lg:hidden">
             <ImageWithFallback 
               src={greenPulseLogo} 
@@ -236,7 +205,6 @@ export default function LoginForm() {
             <p className="text-sm text-gray-600">جامعة السلطان قابوس</p>
           </div>
 
-          {/* Error Alert */}
           {error && (
             <Alert className="mb-4 border-red-200 bg-red-50">
               <AlertCircle className="h-4 w-4 text-red-600" />
@@ -250,7 +218,6 @@ export default function LoginForm() {
               <TabsTrigger value="signup">إنشاء حساب</TabsTrigger>
             </TabsList>
 
-            {/* Login Tab */}
             <TabsContent value="login">
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-2">
@@ -309,10 +276,8 @@ export default function LoginForm() {
               </form>
             </TabsContent>
 
-            {/* Sign Up Tab */}
             <TabsContent value="signup">
               <form onSubmit={handleSignUp} className="space-y-4">
-                {/* User Type Selection */}
                 <div className="space-y-2">
                   <Label>نوع المستخدم</Label>
                   <div className="grid grid-cols-2 gap-2">
@@ -347,7 +312,6 @@ export default function LoginForm() {
                   </div>
                 </div>
 
-                {/* Name */}
                 <div className="space-y-2">
                   <Label htmlFor="name">الاسم الكامل</Label>
                   <div className="relative">
@@ -364,7 +328,6 @@ export default function LoginForm() {
                   </div>
                 </div>
 
-                {/* University ID */}
                 <div className="space-y-2">
                   <Label htmlFor="university_id">
                     {signUpData.user_type === 'student' ? 'الرقم الجامعي' : 'الرقم الوظيفي'}
@@ -379,7 +342,6 @@ export default function LoginForm() {
                   />
                 </div>
 
-                {/* Department */}
                 <div className="space-y-2">
                   <Label htmlFor="department">
                     {signUpData.user_type === 'student' ? 'التخصص' : 'القسم'}
@@ -401,7 +363,6 @@ export default function LoginForm() {
                   </Select>
                 </div>
 
-                {/* Email */}
                 <div className="space-y-2">
                   <Label htmlFor="signup-email">البريد الإلكتروني</Label>
                   <div className="relative">
@@ -418,7 +379,6 @@ export default function LoginForm() {
                   </div>
                 </div>
 
-                {/* Password */}
                 <div className="space-y-2">
                   <Label htmlFor="signup-password">كلمة المرور</Label>
                   <div className="relative">
@@ -442,7 +402,6 @@ export default function LoginForm() {
                   </div>
                 </div>
 
-                {/* Confirm Password */}
                 <div className="space-y-2">
                   <Label htmlFor="confirm-password">تأكيد كلمة المرور</Label>
                   <div className="relative">
@@ -484,7 +443,6 @@ export default function LoginForm() {
             </TabsContent>
           </Tabs>
 
-          {/* Demo Account Info */}
           <div className="mt-6 p-3 bg-blue-50 rounded-lg border border-blue-200">
             <h4 className="font-medium text-blue-900 text-sm mb-2">حساب تجريبي:</h4>
             <p className="text-xs text-blue-700">
@@ -493,6 +451,41 @@ export default function LoginForm() {
             </p>
           </div>
         </Card>
+      </div>
+      <div className="hidden lg:flex flex-col items-center justify-center bg-gradient-to-br from-green-500 to-emerald-600 p-12 text-white">
+        <div className="max-w-md text-center">
+          <ImageWithFallback 
+              src={greenPulseLogo} 
+              alt="Green Pulse Logo" 
+              className="w-24 h-24 object-contain mx-auto mb-6"
+            />
+          <h1 className="text-4xl font-bold mb-4">المحفظة الرقمية الكربونية</h1>
+          <p className="text-lg mb-8 text-green-100">جامعة السلطان قابوس</p>
+
+          <div className="space-y-6 text-right">
+            <div className="flex items-start gap-4">
+              <div className="bg-white/20 p-2 rounded-full"><Leaf className="w-6 h-6 text-white"/></div>
+              <div>
+                <h3 className="font-semibold">تعزيز الوعي البيئي</h3>
+                <p className="text-sm text-green-200">زيادة الوعي بأهمية تقليل البصمة الكربونية.</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-4">
+              <div className="bg-white/20 p-2 rounded-full"><Users className="w-6 h-6 text-white"/></div>
+              <div>
+                <h3 className="font-semibold">تشجيع المشاركة المجتمعية</h3>
+                <p className="text-sm text-green-200">تحفيز الطلاب والموظفين على تبني ممارسات صديقة للبيئة.</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-4">
+              <div className="bg-white/20 p-2 rounded-full"><Award className="w-6 h-6 text-white"/></div>
+              <div>
+                <h3 className="font-semibold">مكافأة السلوكيات الإيجابية</h3>
+                <p className="text-sm text-green-200">كسب النقاط والمكافآت من خلال المشاركة في الأنشطة البيئية.</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
     </>
