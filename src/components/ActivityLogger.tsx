@@ -42,7 +42,7 @@ const activityTypes = [
     icon: Car,
     options: [
       { value: 'bus', label: 'الحافلة الجامعية', carbonFactor: 0.5, unit: 'km' },
-      { value: 'walking', label: 'المشي', carbonFactor: 0, unit: 'km' },
+      { value: 'walking', label: 'المشي', carbonFactor: 1.5, unit: 'km' },
       { value: 'carpooling', label: 'استخدام النقل العام', carbonFactor: 1.2, unit: 'km' }
     ]
   },
