@@ -7,7 +7,6 @@ import {
   useAuthContext,
 } from "./components/auth/AuthProvider";
 import LoginForm from "./components/auth/LoginForm";
-import ProfileSetup from "./components/ProfileSetup";
 import {
   Tabs,
   TabsContent,
@@ -104,8 +103,17 @@ function AppContent() {
     return <LoginForm />;
   }
 
-  if (user && !profile) {
-    return <ProfileSetup />;
+  // FIX: Add a check for the profile object before trying to access its properties.
+  // This prevents a crash if the user is loaded but the profile isn't yet.
+  if (!profile) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <Loader2 className="w-16 h-16 mx-auto animate-spin text-primary" />
+          <p className="text-muted-foreground">جاري تحميل بيانات الملف الشخصي...</p>
+        </div>
+      </div>
+    );
   }
 
   const userData = {

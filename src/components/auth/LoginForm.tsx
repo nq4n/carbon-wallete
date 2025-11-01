@@ -44,7 +44,7 @@ interface SignUpData {
 }
 
 export default function LoginForm() {
-  const { signIn, signUp, createProfile, loading } = useAuthContext()
+  const { signIn, signUp } = useAuthContext()
   const [activeTab, setActiveTab] = useState('login')
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
@@ -74,7 +74,7 @@ export default function LoginForm() {
     setIsAnimating(false);
 
     try {
-      const { data, error } = await signIn(loginData.email, loginData.password)
+      const { error } = await signIn(loginData.email, loginData.password)
       
       if (error) {
         setError(error.message === 'Invalid login credentials' 
@@ -134,16 +134,14 @@ export default function LoginForm() {
         )
         setIsAnimating(true);
       } else if (data.user) {
-        await createProfile({
-          id: data.user.id,
-          email: signUpData.email,
-          name: signUpData.name,
-          user_type: signUpData.user_type,
-          university_id: signUpData.university_id,
-          department: signUpData.department
-        })
-        
-        toast.success('تم إنشاء الحساب بنجاح!')
+        toast.success('تم إنشاء الحساب بنجاح! جاري تسجيل الدخول...')
+
+        // Automatically sign in the user
+        const { error: signInError } = await signIn(signUpData.email, signUpData.password)
+        if (signInError) {
+          setError('حدث خطأ أثناء تسجيل الدخول التلقائي');
+          setIsAnimating(true);
+        }
       }
     } catch (err) {
       setError('حدث خطأ غير متوقع')
@@ -156,16 +154,15 @@ export default function LoginForm() {
 
   const departments = {
     student: [
-      'هندسة الحاسوب',
-      'هندسة البرمجيات',
-      'تقنية المعلومات',
-      'الهندسة المدنية',
-      'الهندسة الميكانيكية',
-      'الهندسة الكهربائية',
-      'العلوم',
-      'الطب',
-      'التجارة والاقتصاد',
-      'الآداب والعلوم الاجتماعية'
+      'كلية الهندسة',
+      'كلية العلوم',
+      'كلية الطب والعلوم الصحية',
+      'كلية العلوم الزراعية والبحرية',
+      'كلية الاقتصاد والعلوم السياسية',
+      'كلية الآداب والعلوم الاجتماعية',
+      'كلية التربية',
+      'كلية الحقوق',
+      'كلية التمريض'
     ],
     employee: [
       'قسم تقنية المعلومات',
@@ -344,14 +341,14 @@ export default function LoginForm() {
 
                 <div className="space-y-2">
                   <Label htmlFor="department">
-                    {signUpData.user_type === 'student' ? 'التخصص' : 'القسم'}
+                    {signUpData.user_type === 'student' ? 'الكلية' : 'القسم'}
                   </Label>
                   <Select 
                     value={signUpData.department} 
                     onValueChange={(value) => setSignUpData(prev => ({ ...prev, department: value }))}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder={`اختر ${signUpData.user_type === 'student' ? 'التخصص' : 'القسم'}`} />
+                      <SelectValue placeholder={`اختر ${signUpData.user_type === 'student' ? 'الكلية' : 'القسم'}`} />
                     </SelectTrigger>
                     <SelectContent>
                       {departments[signUpData.user_type].map((dept) => (
