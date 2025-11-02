@@ -1,0 +1,124 @@
+/* ===== Roadmap Showcase (map-like) ===== */
+:root{
+  --gp-green: #16a34a;          /* green-600 */
+  --gp-green-2: #22c55e;        /* green-500 */
+  --gp-dark: #0f172a;           /* slate-900 */
+  --gp-shadow: 0 14px 36px rgba(2,6,23,.14);
+  --gp-glass: rgba(255,255,255,.6);
+}
+
+.roadmap-wrap{
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4/5;
+  border-radius: 18px;
+  background: var(--gp-glass);
+  backdrop-filter: blur(6px);
+  box-shadow: var(--gp-shadow);
+  overflow: hidden;
+}
+
+/* خلفية خفيفة */
+.roadmap-wrap::before{
+  content:"";
+  position:absolute; inset:0;
+  background:
+    radial-gradient(circle at 15% 10%, rgba(22,163,74,.06), transparent 45%),
+    radial-gradient(circle at 80% 30%, rgba(34,197,94,.05), transparent 50%),
+    radial-gradient(circle at 20% 85%, rgba(34,197,94,.05), transparent 50%);
+  pointer-events:none;
+}
+
+/* لوحة SVG */
+.roadmap-canvas{
+  position: absolute; inset: 0;
+}
+
+/* الخط المتعرج */
+.roadmap-path{
+  fill:none;
+  stroke: var(--gp-green);
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 12 10;
+  animation: dash 10s linear infinite;
+  filter: drop-shadow(0 0 6px rgba(22,163,74,.25));
+}
+
+@keyframes dash{
+  to { stroke-dashoffset: -160; }
+}
+
+/* النقاط */
+.node{
+  position:absolute;
+  transform: translate(-50%, -50%);
+  display:flex; align-items:center; gap:.5rem;
+  background: rgba(255,255,255,.85);
+  border: 1px solid rgba(2,6,23,.06);
+  border-radius: 14px;
+  padding: .5rem .6rem;
+  box-shadow: 0 8px 22px rgba(2,6,23,.10);
+}
+.node img{
+  width: 46px; height: 46px; object-fit: cover; border-radius: 10px;
+}
+.node .k{
+  font-size: .8rem; color: #0b172a; font-weight: 600; white-space: nowrap;
+}
+
+/* المعرض */
+.gallery{
+  position: absolute; left: 50%; bottom: 10%;
+  transform: translateX(-50%);
+  display: grid; grid-template-columns: repeat(5, minmax(0,1fr));
+  gap: .35rem;
+  width: min(92%, 520px);
+}
+.gallery img{
+  width: 100%; height: 76px; object-fit: cover; border-radius: 10px;
+  box-shadow: 0 6px 16px rgba(0,0,0,.08);
+}
+
+/* الشعار أعلى اليسار افتراضيًا */
+.logo-badge{
+  position:absolute; top: 7%; left: 10%;
+  display:flex; align-items:center; gap:.5rem;
+  background: rgba(255,255,255,.92);
+  border: 1px solid rgba(2,6,23,.06);
+  border-radius: 999px;
+  padding: .35rem .6rem;
+  box-shadow: 0 10px 24px rgba(2,6,23,.10);
+}
+.logo-badge img{
+  width: 40px; height: 40px; object-fit: contain;
+}
+.logo-badge span{
+  font-size: .85rem; font-weight: 700; color: var(--gp-dark);
+}
+
+/* زرّان في نهاية المسار */
+.cta{
+  position: absolute; right: 8%; bottom: 8%;
+  display:flex; gap:.5rem; flex-wrap:wrap;
+}
+.cta button{
+  border-radius: 999px;
+  padding: .55rem .9rem;
+  font-weight: 700; font-size: .9rem;
+  border: 1px solid rgba(2,6,23,.08);
+  box-shadow: 0 10px 22px rgba(2,6,23,.12);
+}
+.cta .primary{ background: var(--gp-green); color: #fff; }
+.cta .outline{ background: #fff; color: var(--gp-dark); }
+
+/* تجاوبية بسيطة */
+@media (min-width: 768px){
+  .node img{ width: 54px; height: 54px; }
+  .gallery img{ height: 86px; }
+}
+@media (min-width: 1024px){
+  .node img{ width: 60px; height: 60px; }
+  .gallery img{ height: 96px; }
+}

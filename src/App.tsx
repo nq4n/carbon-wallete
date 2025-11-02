@@ -6,7 +6,7 @@ import {
   AuthProvider,
   useAuthContext,
 } from "./components/auth/AuthProvider";
-import LoginForm from "./components/auth/LoginForm";
+import Auth from "./components/auth/Auth";
 import {
   Tabs,
   TabsContent,
@@ -47,7 +47,7 @@ import {
   Lightbulb,
   Loader2,
 } from "lucide-react";
-import greenPulseLogo from "figma:asset/2c1ec6a90a7fc9cfca4f45b98c3e9ac1918a1565.png";
+import greenPulseLogo from "./assets/logo.png";
 import { ImageWithFallback } from "./components/figma/ImageWithFallback";
 import { Toaster } from './components/ui/sonner';
 import GrowingTreeBackground from "./components/auth/GrowingTreeBackground";
@@ -101,7 +101,7 @@ function AppContent() {
   }
 
   if (!user) {
-    return <LoginForm />;
+    return <Auth />;
   }
 
   if (!profile) {

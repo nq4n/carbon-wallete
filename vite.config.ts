@@ -13,7 +13,7 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
+        "@": path.resolve(__dirname, "./src"),
       "figma:asset/2c1ec6a90a7fc9cfca4f45b98c3e9ac1918a1565.png":
         path.resolve(__dirname, "./src/assets/2c1ec6a90a7fc9cfca4f45b98c3e9ac1918a1565.png"),
     },
