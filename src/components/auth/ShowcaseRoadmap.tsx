@@ -4,15 +4,15 @@ import { useMemo } from 'react';
 import '../styles/showcase-roadmap.css';
 
 /* صور */
-import logo from '@/assets/images/logo.png';
-import who from '@/assets/images/who_are_we.jpg';
-import vission from '@/assets/images/our_vission.jpg';
-import massage from '@/assets/images/our_massage.jpg';
-import a1 from '@/assets/images/activities/activity_1.jpg';
-import a2 from '@/assets/images/activities/activity_2.jpg';
-import a3 from '@/assets/images/activities/activity_3.jpg';
-import a4 from '@/assets/images/activities/activity_4.jpg';
-import a5 from '@/assets/images/activities/activity_5.jpg';
+import logo from '@/assets/logo.png';
+import who from '@/assets/photos/who_are_we.jpg';
+import vission from '@/assets/photos/our_vission.jpg';
+import massage from '@/assets/photos/our_massage.jpg';
+import a1 from '@/assets/photos/activities/activity_1.jpg';
+import a2 from '@/assets/photos/activities/activity_2.jpg';
+import a3 from '@/assets/photos/activities/activity_3.jpg';
+import a4 from '@/assets/photos/activities/activity_4.jpg';
+import a5 from '@/assets/photos/activities/activity_5.jpg';
 
 type Props = {
   onLogin: () => void;

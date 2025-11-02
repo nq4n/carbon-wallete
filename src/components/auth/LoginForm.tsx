@@ -1,28 +1,27 @@
 'use client';
 
 import { useState } from 'react';
-import { Card } from '<div styleName={} />
-<div styleName={}></div>/components/ui/card';
-import { Button } from './components/ui/button';
-import { Input } from './components/ui/input';
-import { Label } from './components/ui/label';
-import { Alert } from './components/ui/alert';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card } from '../../components/ui/card';
+import { Button } from '../../components/ui/button';
+import { Input } from '../../components/ui/input';
+import { Label } from '../../components/ui/label';
+import { Alert } from '../../components/ui/alert';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { useAuthContext } from './AuthProvider';
 import { Eye, EyeOff, Mail, Lock, User, GraduationCap, Briefcase, Loader2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 import GrowingTreeBackground from './GrowingTreeBackground';
-import { ImageWithFallback } from '@/components/figma/ImageWithFallback';
-import logo from '@/assets/images/logo.png';
+import { ImageWithFallback } from '../../components/figma/ImageWithFallback';
+import logo from '@/assets/logo.png';
 
 /* شخصيات يمين ويسار الكرت */
-import man from '@/assets/images/characters/man_figure.png';
-import woman from '@/assets/images/characters/women_figure.png';
+import man from '@/assets/photos/characters/man_figure.png';
+import woman from '@/assets/photos/women_figure.png';
 
 /* الـShowcase بنمط الخريطة */
-import ShowcaseRoadmap from './ShowcaseRoadmap';
+import ShowcaseRoadmap from '../../ShowcaseRoadmap';
 
 type LoginData = { email:string; password:string; };
 type SignUpData = {
