@@ -6,7 +6,7 @@ import {
   AuthProvider,
   useAuthContext,
 } from "./components/auth/AuthProvider";
-import Auth from "./components/auth/Auth";
+import LoginForm from "./components/auth/LoginForm";
 import {
   Tabs,
   TabsContent,
@@ -101,7 +101,7 @@ function AppContent() {
   }
 
   if (!user) {
-    return <Auth />;
+    return <LoginForm />;
   }
 
   if (!profile) {
