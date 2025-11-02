@@ -21,6 +21,8 @@ import {
 import { supabase } from "../lib/supabase";
 import { useAuth } from '../hooks/useAuth';
 import ActivityLogger from './ActivityLogger';
+import QRScanner from './QRScanner';
+import { toast } from "sonner";
 
 const PAGE_LIMIT = 10;
 
@@ -61,35 +63,47 @@ export default function CarbonDashboard() {
   const [monthKg, setMonthKg] = useState(0);
   const [challenges, setChallenges] = useState<Challenge[]>([]);
 
-  const loadSummary = async () => {
-    if(!user) return;
-    const { data: s } = await supabase
-      .from("v_user_carbon_summary")
-      .select("*")
-      .eq("user_id", user.id)
-      .maybeSingle();
-    setSummary(s);
-  };
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [selectedChallenge, setSelectedChallenge] = useState<Challenge | null>(null);
 
   const loadActivities = async () => {
     if(!user) return;
-    const { data: a } = await supabase
-      .from("activity_logs")
-      .select("id,kind,description,carbon_saved_kg,points_earned,created_at")
+    const { data: a, error } = await supabase
+      .from("activity_log")
+      .select(`id, created_at, carbon_saved, points_earned, activity_catalog ( name, kind )`)
       .eq("user_id", user.id)
       .order("created_at", { ascending:false })
       .limit(PAGE_LIMIT);
-    setActivities(a ?? []);
+
+    if (error) {
+      console.error("Error loading activities:", error);
+      setActivities([]);
+      return;
+    }
+    
+    const formattedActivities = a?.map(act => ({
+      id: act.id,
+      created_at: act.created_at,
+      carbon_saved_kg: act.carbon_saved,
+      points_earned: act.points_earned,
+      description: act.activity_catalog.name,
+      kind: act.activity_catalog.kind
+    })) ?? [];
+    
+    setActivities(formattedActivities);
   };
 
   const loadPoints = async () => {
     if(!user) return;
     const { data: p } = await supabase
       .from("user_profiles")
-      .select("points")
+      .select("points, level")
       .eq("id", user.id)
       .maybeSingle();
     setPoints(p?.points ?? 0);
+    if (p) {
+      setSummary(prev => ({ ...prev, level: p.level } as CarbonData));
+    }
   };
 
   const loadChallenges = async () => {
@@ -114,12 +128,12 @@ export default function CarbonDashboard() {
       return;
     }
 
-    const completedChallengeIds = new Set(completedChallengesData.map(c => c.challenge_id));
+    const completedChallengeIds = new Set(completedChallengesData?.map(c => c.challenge_id) ?? []);
 
-    const formattedChallenges = challengesData.map(c => ({
+    const formattedChallenges = challengesData?.map(c => ({
       ...c,
       is_completed: completedChallengeIds.has(c.id),
-    }));
+    })) ?? [];
 
     setChallenges(formattedChallenges);
   };
@@ -127,21 +141,24 @@ export default function CarbonDashboard() {
   async function totalCarbonSince(s: Date) {
     if (!user) return 0;
     const { data, error } = await supabase
-      .from("activity_logs")
-      .select("carbon_saved_kg")
+      .from("activity_log")
+      .select("carbon_saved")
       .eq("user_id", user.id)
       .gte("created_at", s.toISOString());
-    if (error) return 0;
-    return (data ?? []).reduce((t,x)=>t+Number(x.carbon_saved_kg||0),0);
+    if (error) {
+      console.error(`Error calculating total carbon since ${s.toISOString()}:`, error);
+      return 0;
+    }
+    return (data ?? []).reduce((t,x)=>t+Number(x.carbon_saved||0),0);
   }
 
   const reload = async () => {
     if (!user) return;
-    await Promise.all([loadSummary(), loadActivities(), loadPoints(), loadChallenges()]);
+    await Promise.all([loadActivities(), loadPoints(), loadChallenges()]);
 
     const startOfDay = new Date(); startOfDay.setHours(0,0,0,0);
-    const startOfWeek = new Date(); startOfWeek.setDate(startOfWeek.getDate()-startOfWeek.getDay());
-    const startOfMonth = new Date(); startOfMonth.setDate(1);
+    const startOfWeek = new Date(); startOfWeek.setDate(startOfWeek.getDate()-startOfWeek.getDay()); startOfWeek.setHours(0,0,0,0);
+    const startOfMonth = new Date(); startOfMonth.setDate(1); startOfMonth.setHours(0,0,0,0);
 
     totalCarbonSince(startOfDay).then(setTodayKg);
     totalCarbonSince(startOfWeek).then(setWeekKg);
@@ -152,6 +169,50 @@ export default function CarbonDashboard() {
     reload();
   }, [user]);
 
+  const handleCompleteChallengeClick = (challenge: Challenge) => {
+    setSelectedChallenge(challenge);
+    setIsScannerOpen(true);
+  };
+
+  const handleScannerClose = () => {
+    setIsScannerOpen(false);
+    setSelectedChallenge(null);
+  };
+
+  const handleChallengeScanned = async (scannedData: string) => {
+    handleScannerClose();
+    if (!user || !selectedChallenge) {
+      toast.error("حدث خطأ ما. حاول مرة أخرى.");
+      return;
+    }
+    
+    let parsedData;
+    try {
+      parsedData = JSON.parse(scannedData);
+    } catch (e) {
+      toast.error("رمز QR غير صالح أو تالف.");
+      return;
+    }
+
+    if (parsedData.challenge_id != selectedChallenge.id) {
+        toast.error(`رمز QR هذا لا يتطابق مع تحدي "${selectedChallenge.title}".`);
+        return;
+    }
+
+    const { error } = await supabase.rpc('complete_challenge', { 
+      p_challenge_id: selectedChallenge.id, 
+      p_user_id: user.id 
+    });
+
+    if (error) {
+      console.error("Error completing challenge:", error);
+      toast.error("لم يتم إكمال التحدي. قد تكون أكملته بالفعل.");
+    } else {
+      toast.success(`تهانينا! لقد أكملت تحدي "${selectedChallenge.title}" وحصلت على ${selectedChallenge.points_reward} نقطة.`);
+      await reload(); 
+    }
+  };
+  
   const weeklyTarget = 35;
   const weeklyProgress = (weekKg / weeklyTarget) * 100;
 
@@ -172,7 +233,7 @@ export default function CarbonDashboard() {
       case 'food': return 'bg-orange-100 text-orange-700';
     }
   };
-
+  
   const daysRemaining = (dueDate: string) => {
     if (!dueDate) return null;
     const due = new Date(dueDate);
@@ -191,26 +252,19 @@ export default function CarbonDashboard() {
           <p className="text-muted-foreground">تتبع بصمتك الكربونية واربح النقاط</p>
         </div>
         <div className="flex items-center gap-4">
-          <Badge variant="secondary" className="text-lg px-4 py-2">
-            <Trophy className="w-4 h-4 ml-2" />
-            {points} نقطة
-          </Badge>
-          <Badge variant="outline" className="text-lg px-4 py-2">
-            {summary?.level ?? '...'}
-          </Badge>
+          <Badge variant="secondary" className="text-lg px-4 py-2"><Trophy className="w-4 h-4 ml-2" />{points} نقطة</Badge>
+          <Badge variant="outline" className="text-lg px-4 py-2">{summary?.level ?? '...'}</Badge>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="p-4">
+       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-muted-foreground">اليوم</p>
               <p className="text-2xl font-bold">{todayKg.toFixed(1)} كجم CO₂</p>
             </div>
-            <div className="p-2 bg-green-100 rounded-lg">
-              <TrendingDown className="w-5 h-5 text-green-600" />
-            </div>
+            <div className="p-2 bg-green-100 rounded-lg"><TrendingDown className="w-5 h-5 text-green-600" /></div>
           </div>
         </Card>
 
@@ -220,9 +274,7 @@ export default function CarbonDashboard() {
               <p className="text-sm text-muted-foreground">هذا الأسبوع</p>
               <p className="text-2xl font-bold">{weekKg.toFixed(1)} كجم CO₂</p>
             </div>
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Calendar className="w-5 h-5 text-blue-600" />
-            </div>
+            <div className="p-2 bg-blue-100 rounded-lg"><Calendar className="w-5 h-5 text-blue-600" /></div>
           </div>
         </Card>
 
@@ -232,9 +284,7 @@ export default function CarbonDashboard() {
               <p className="text-sm text-muted-foreground">هذا الشهر</p>
               <p className="text-2xl font-bold">{monthKg.toFixed(1)} كجم CO₂</p>
             </div>
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <Leaf className="w-5 h-5 text-purple-600" />
-            </div>
+            <div className="p-2 bg-purple-100 rounded-lg"><Leaf className="w-5 h-5 text-purple-600" /></div>
           </div>
         </Card>
 
@@ -244,55 +294,45 @@ export default function CarbonDashboard() {
               <p className="text-sm text-muted-foreground">الترتيب</p>
               <p className="text-2xl font-bold">#{summary?.rank ?? 0}</p>
             </div>
-            <div className="p-2 bg-yellow-100 rounded-lg">
-              <Award className="w-5 h-5 text-yellow-600" />
-            </div>
+            <div className="p-2 bg-yellow-100 rounded-lg"><Award className="w-5 h-5 text-yellow-600" /></div>
           </div>
         </Card>
       </div>
-
-      <Card className="p-6">
+      
+       <Card className="p-6">
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <Target className="w-5 h-5" />
-            <h3 className="font-semibold">الهدف الأسبوعي</h3>
-          </div>
-          <span className="text-sm text-muted-foreground">
-            {(summary?.total_carbon_saved_kg ?? 0).toFixed(1)} / {weeklyTarget} كجم CO₂
-          </span>
+          <div className="flex items-center gap-2"><Target className="w-5 h-5" /><h3 className="font-semibold">الهدف الأسبوعي</h3></div>
+          <span className="text-sm text-muted-foreground">{weekKg.toFixed(1)} / {weeklyTarget} كجم CO₂</span>
         </div>
         <Progress value={weeklyProgress} className="h-3" />
-        <p className="text-sm text-muted-foreground mt-2">
-          {weeklyProgress > 100 ? 'تجاوزت هدفك!' : `${(weeklyTarget - (summary?.total_carbon_saved_kg ?? 0)).toFixed(1)} كجم متبقية للوصول للهدف`}
-        </p>
+        <p className="text-sm text-muted-foreground mt-2">{weeklyProgress > 100 ? 'تجاوزت هدفك!' : `${(weeklyTarget - weekKg).toFixed(1)} كجم متبقية للوصول للهدف`}</p>
       </Card>
 
       <Tabs defaultValue="activities" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="activities">الأنشطة الأخيرة</TabsTrigger>
-          <TabsTrigger value="challenges">التحديات</TabsTrigger>
-        </TabsList>
+        <TabsList className="grid w-full grid-cols-2"><TabsTrigger value="activities">الأنشطة الأخيرة</TabsTrigger><TabsTrigger value="challenges">التحديات</TabsTrigger></TabsList>
 
         <TabsContent value="activities" className="space-y-4">
-          <Card className="p-4">
+           <Card className="p-4">
             <h3 className="font-semibold mb-4">أنشطة اليوم</h3>
             <div className="space-y-3">
-              {activities.map((activity) => (
-                <div key={activity.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-full ${getActivityColor(activity.kind)}`}>
-                      {getActivityIcon(activity.kind)}
+              {activities.length === 0 ? (
+                <p className="text-muted-foreground text-center">لم تسجل أي أنشطة بعد.</p>
+              ) : (
+                activities.map((activity) => (
+                  <div key={activity.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-full ${getActivityColor(activity.kind)}`}>
+                        {getActivityIcon(activity.kind)}
+                      </div>
+                      <div>
+                        <p className="font-medium">{activity.description}</p>
+                        <p className="text-sm text-muted-foreground">وفرت {activity.carbon_saved_kg.toFixed(2)} كجم CO₂</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-medium">{activity.description}</p>
-                      <p className="text-sm text-muted-foreground">
-                        وفرت {activity.carbon_saved_kg} كجم CO₂
-                      </p>
-                    </div>
+                    <Badge variant="secondary">+{activity.points_earned} نقطة</Badge>
                   </div>
-                  <Badge variant="secondary">+{activity.points_earned} نقطة</Badge>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </Card>
         </TabsContent>
@@ -304,20 +344,19 @@ export default function CarbonDashboard() {
                 <div className="flex items-center justify-between mb-3">
                   <h4 className="font-semibold">{challenge.title}</h4>
                   {challenge.is_completed ? (
-                    <Badge className="bg-green-600 text-white">
-                      <CheckCircle className="w-4 h-4 ml-1" />
-                      مكتمل
-                    </Badge>
+                    <Badge className="bg-green-600 text-white"><CheckCircle className="w-4 h-4 ml-1" />مكتمل</Badge>
                   ) : (
                     <Badge variant="outline">{daysRemaining(challenge.due_date)}</Badge>
                   )}
                 </div>
-                <p className="text-sm text-muted-foreground mb-3">
-                  {challenge.description}
-                </p>
+                <p className="text-sm text-muted-foreground mb-3">{challenge.description}</p>
                 <div className="flex items-center justify-between text-sm">
                   <span className="font-bold text-green-600">+{challenge.points_reward} نقطة</span>
-                  {!challenge.is_completed && <Button size="sm">إكمال التحدي</Button>}
+                  {!challenge.is_completed && (
+                    <Button size="sm" onClick={() => handleCompleteChallengeClick(challenge)}>
+                      إكمال التحدي
+                    </Button>
+                  )}
                 </div>
               </Card>
             ))}
@@ -326,12 +365,17 @@ export default function CarbonDashboard() {
       </Tabs>
 
       <div className="flex gap-4">
-        <ActivityLogger onSaved={reload} />
-        <Button variant="outline" className="flex-1">
-          <Award className="w-4 h-4 ml-2" />
-          استبدل النقاط
-        </Button>
+         <ActivityLogger onSaved={reload} />
+         <Button variant="outline" className="flex-1"><Award className="w-4 h-4 ml-2" />استبدل النقاط</Button>
       </div>
+
+      {isScannerOpen && (
+        <QRScanner 
+            isOpen={isScannerOpen} 
+            onClose={handleScannerClose} 
+            onScanResult={handleChallengeScanned} 
+        />
+      )}
     </div>
   );
 }

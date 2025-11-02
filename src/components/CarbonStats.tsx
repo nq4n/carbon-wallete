@@ -4,47 +4,51 @@ import { useState, useEffect } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { Badge } from './ui/badge';
 import { 
-  LineChart, 
-  Line, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-  AreaChart,
-  Area
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell
 } from 'recharts';
 import {
-  TrendingDown,
-  Calendar,
-  Users,
-  Download,
-  Share2,
-  Loader2
+  TrendingUp, TrendingDown, Calendar, Users, Download, Share2, Loader2, Award, Zap, Car, Trash2, Leaf
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
+
+// --- Helper Functions ---
+const translateActivityKind = (kind: string | null) => {
+  if (!kind) return '...';
+  switch (kind) {
+    case 'transport': return 'النقل';
+    case 'energy': return 'الطاقة';
+    case 'waste': return 'النفايات';
+    case 'food': return 'الطعام';
+    default: return kind;
+  }
+};
+
+const getActivityIcon = (kind: string | null) => {
+    if (!kind) return <Calendar className="w-4 h-4 text-gray-500" />;
+    switch (kind) {
+      case 'transport': return <Car className="w-4 h-4 text-blue-500" />;
+      case 'energy': return <Zap className="w-4 h-4 text-yellow-500" />;
+      case 'waste': return <Trash2 className="w-4 h-4 text-green-500" />;
+      case 'food': return <Leaf className="w-4 h-4 text-orange-500" />;
+      default: return <Award className="w-4 h-4 text-gray-500" />;
+    }
+};
 
 const categoryColors: { [key: string]: string } = {
   transport: '#3b82f6',
   energy: '#eab308',
   waste: '#22c55e',
   food: '#f97316',
-  other: '#64748b'
 };
+
+const arabicWeekDays = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 
 export default function CarbonStats() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [weeklyData, setWeeklyData] = useState<any[]>([]);
-  const [monthlyData, setMonthlyData] = useState<any[]>([]);
   const [categoryData, setCategoryData] = useState<any[]>([]);
   const [comparisonData, setComparisonData] = useState<any[]>([]);
   const [keyInsights, setKeyInsights] = useState<any>({});
@@ -55,76 +59,76 @@ export default function CarbonStats() {
     const fetchData = async () => {
       setLoading(true);
 
-      // 1. Fetch all activity logs for the user
-      const { data: logs, error } = await supabase
-        .from('activity_logs')
-        .select('created_at, carbon_saved_kg, points_earned, kind')
-        .eq('user_id', user.id);
+      const { data: stats, error: statsError } = await supabase.rpc('get_user_stats', { p_user_id: user.id });
+      
+      if (statsError) {
+        console.error("Error fetching user stats:", statsError);
+      } else if (stats) {
+        setKeyInsights(stats);
+        setComparisonData([
+          { category: 'أنت', value: stats.totalCarbonSaved, color: '#3b82f6' },
+          { category: 'متوسط القسم', value: stats.departmentAverage, color: '#64748b' },
+          { category: 'متوسط الجامعة', value: stats.universityAverage, color: '#94a3b8' },
+        ]);
+      }
 
-      if (error || !logs) {
+      const today = new Date();
+      const dayOfWeek = today.getDay(); // 0 for Sunday
+      const startDate = new Date(today);
+      startDate.setDate(today.getDate() - dayOfWeek);
+      startDate.setHours(0, 0, 0, 0);
+
+      const endDate = new Date(startDate);
+      endDate.setDate(startDate.getDate() + 6);
+      endDate.setHours(23, 59, 59, 999);
+
+      const { data: logs, error: logsError } = await supabase
+        .from('activity_log')
+        .select('created_at, carbon_saved, activity_catalog(kind)')
+        .eq('user_id', user.id)
+        .gte('created_at', startDate.toISOString())
+        .lte('created_at', endDate.toISOString());
+
+      if (logsError) {
+        console.error("Error fetching activity logs for the week:", logsError);
         setLoading(false);
         return;
       }
 
-      const now = new Date();
+      const weeklyMap = new Map<number, { dayName: string; carbon: number }>();
+      for (let i = 0; i < 7; i++) {
+        weeklyMap.set(i, { dayName: arabicWeekDays[i], carbon: 0 });
+      }
 
-      // 2. Process Weekly Data
-      const last7Days = Array(7).fill(0).map((_, i) => {
-        const d = new Date();
-        d.setDate(now.getDate() - i);
-        return d.toISOString().split('T')[0];
-      }).reverse();
-
-      const processedWeeklyData = last7Days.map(day => {
-        const dayLogs = logs.filter(log => log.created_at.startsWith(day));
-        const totalCarbon = dayLogs.reduce((sum, log) => sum + log.carbon_saved_kg, 0);
-        return { day: new Date(day).toLocaleDateString('ar-SA', { weekday: 'short' }), carbon: totalCarbon, target: 5.0 };
+      logs.forEach(log => {
+        const logDayIndex = new Date(log.created_at).getDay();
+        const entry = weeklyMap.get(logDayIndex)!;
+        entry.carbon += log.carbon_saved;
       });
+
+      const processedWeeklyData = Array.from(weeklyMap.values()).map(d => ({ 
+        day: d.dayName, 
+        carbon: d.carbon.toFixed(2) 
+      }));
+
       setWeeklyData(processedWeeklyData);
-
-      // 3. Process Monthly Data
-      const last6Months = Array(6).fill(0).map((_, i) => {
-        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        return { month: d.toLocaleString('ar-SA', { month: 'long' }), year: d.getFullYear() };
-      }).reverse();
-
-      const processedMonthlyData = last6Months.map(m => {
-        const monthLogs = logs.filter(log => {
-          const logDate = new Date(log.created_at);
-          return logDate.getFullYear() === m.year && logDate.toLocaleString('ar-SA', { month: 'long' }) === m.month;
-        });
-        const totalCarbon = monthLogs.reduce((sum, log) => sum + log.carbon_saved_kg, 0);
-        const totalPoints = monthLogs.reduce((sum, log) => sum + log.points_earned, 0);
-        return { month: m.month, carbon: totalCarbon, points: totalPoints };
-      });
-      setMonthlyData(processedMonthlyData);
-
-      // 4. Process Category Data
-      const categoryMap: { [key: string]: number } = {};
+      
+      const categoryMap = new Map<string, number>();
       let totalCarbonSaved = 0;
       logs.forEach(log => {
-        categoryMap[log.kind] = (categoryMap[log.kind] || 0) + log.carbon_saved_kg;
-        totalCarbonSaved += log.carbon_saved_kg;
+        const kind = log.activity_catalog.kind;
+        const current = categoryMap.get(kind) || 0;
+        categoryMap.set(kind, current + log.carbon_saved);
+        totalCarbonSaved += log.carbon_saved;
       });
-      const processedCategoryData = Object.entries(categoryMap).map(([name, value]) => ({
-        name,
-        value: (value / totalCarbonSaved) * 100, // as percentage
-        absolute_value: value,
-        color: categoryColors[name] || '#64748b'
+      const processedCategoryData = Array.from(categoryMap.entries()).map(([name, value]) => ({
+          name: translateActivityKind(name),
+          value: parseFloat(((value / (totalCarbonSaved || 1)) * 100).toFixed(1)),
+          absolute_value: parseFloat(value.toFixed(2)),
+          color: categoryColors[name] || '#64748b'
       }));
       setCategoryData(processedCategoryData);
-
-      // 5. Key Insights & Comparison (using a backend function for efficiency)
-      const { data: insights, error: insightsError } = await supabase.rpc('get_user_stats', { p_user_id: user.id });
-      if (insights) {
-        setKeyInsights(insights);
-        setComparisonData([
-          { category: 'أنت', carbon: insights.user_total, color: '#3b82f6' },
-          { category: 'متوسط القسم', carbon: insights.department_avg, color: '#64748b' },
-          { category: 'متوسط الجامعة', carbon: insights.university_avg, color: '#94a3b8' },
-        ]);
-      } 
-
+      
       setLoading(false);
     };
 
@@ -142,60 +146,59 @@ export default function CarbonStats() {
 
   return (
     <div className="space-y-6" dir="rtl">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-semibold">الإحصائيات والتقارير</h2>
-          <p className="text-muted-foreground">تحليل مفصل لبصمتك الكربونية</p>
+        <div className="flex items-center justify-between">
+            <div>
+                <h2 className="text-xl font-semibold">الإحصائيات والتقارير</h2>
+                <p className="text-muted-foreground">تحليل مفصل لبصمتك الكربونية</p>
+            </div>
+            <div className="flex gap-2">
+                <Button variant="outline" size="sm"><Download className="w-4 h-4 ml-2" />تصدير</Button>
+                <Button variant="outline" size="sm"><Share2 className="w-4 h-4 ml-2" />مشاركة</Button>
+            </div>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm"><Download className="w-4 h-4 ml-2" />تصدير</Button>
-          <Button variant="outline" size="sm"><Share2 className="w-4 h-4 ml-2" />مشاركة</Button>
-        </div>
-      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="p-4">
-          <p className="text-sm text-muted-foreground">التحسن هذا الأسبوع</p>
-          <div className="flex items-center gap-2 mt-1">
-            <span className="text-2xl font-bold text-green-600">{keyInsights.weekly_improvement_pct?.toFixed(0) ?? 0}%</span>
-            <TrendingDown className="w-4 h-4 text-green-600" />
-          </div>
-        </Card>
-        <Card className="p-4">
-          <p className="text-sm text-muted-foreground">أفضل نشاط</p>
-          <div className="flex items-center gap-2 mt-1">
-            <span className="text-2xl font-bold">{keyInsights.top_activity ?? '...'}</span>
-            <Calendar className="w-4 h-4 text-blue-600" />
-          </div>
-        </Card>
-        <Card className="p-4">
-           <p className="text-sm text-muted-foreground">الترتيب بين الأقران</p>
-           <div className="flex items-center gap-2 mt-1">
-             <span className="text-2xl font-bold">#{keyInsights.rank ?? 0}</span>
-             <Users className="w-4 h-4 text-purple-600" />
-           </div>
-        </Card>
-      </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card className="p-4">
+                <p className="text-sm text-muted-foreground">التحسن هذا الأسبوع</p>
+                <div className={`flex items-center gap-2 mt-1 ${keyInsights.weeklyImprovement >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    <span className="text-2xl font-bold">{keyInsights.weeklyImprovement?.toFixed(0) ?? 0}%</span>
+                    {keyInsights.weeklyImprovement >= 0 ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
+                </div>
+            </Card>
+            <Card className="p-4">
+                <p className="text-sm text-muted-foreground">أفضل نشاط</p>
+                <div className="flex items-center gap-2 mt-1">
+                    <span className="text-2xl font-bold">{translateActivityKind(keyInsights.topActivityKind)}</span>
+                    {getActivityIcon(keyInsights.topActivityKind)}
+                </div>
+            </Card>
+            <Card className="p-4">
+                <p className="text-sm text-muted-foreground">الترتيب بين الأقران</p>
+                <div className="flex items-center gap-2 mt-1">
+                    <span className="text-2xl font-bold">#{keyInsights.rank ?? 0}</span>
+                    <Users className="w-4 h-4 text-purple-600" />
+                </div>
+            </Card>
+        </div>
 
       <Tabs defaultValue="trend" className="w-full">
-      <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="trend">الاتجاه</TabsTrigger>
-          <TabsTrigger value="categories">التصنيفات</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="trend">الاتجاه الأسبوعي</TabsTrigger>
+          <TabsTrigger value="categories">التوزيع</TabsTrigger>
           <TabsTrigger value="comparison">المقارنة</TabsTrigger>
-          <TabsTrigger value="monthly">الشهري</TabsTrigger>
         </TabsList>
 
         <TabsContent value="trend">
           <Card className="p-6">
-            <h3 className="font-semibold mb-4">الاتجاه الأسبوعي للبصمة الكربونية</h3>
+            <h3 className="font-semibold mb-4">توفير الكربون (هذا الأسبوع)</h3>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={weeklyData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="day" />
-                  <YAxis />
-                  <Tooltip formatter={(value: any) => [`${Number(value).toFixed(2)} كجم`, 'بصمة الكربون']} />
-                  <Area type="monotone" dataKey="carbon" stroke="#3b82f6" fill="#dbeafe" />
+                  <YAxis unit=" كجم" />
+                  <Tooltip formatter={(value: any) => [`${value} كجم`, 'التوفير']} />
+                  <Area type="monotone" dataKey="carbon" stroke="#16a34a" fill="#dcfce7" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -205,33 +208,33 @@ export default function CarbonStats() {
         <TabsContent value="categories">
            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
              <Card className="p-6">
-               <h3 className="font-semibold mb-4">التوزيع حسب الفئة</h3>
-               <div className="h-64">
+               <h3 className="font-semibold mb-4">التوزيع حسب الفئة (هذا الأسبوع)</h3>
+               <div className="h-80">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={categoryData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={5} dataKey="value">
+                    <Pie data={categoryData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={5} dataKey="value" label={({ name, value }) => `${name} ${value.toFixed(0)}%`}>
                       {categoryData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
                     </Pie>
-                    <Tooltip formatter={(value: any) => [`${value.toFixed(1)}%`, 'النسبة']} />
+                    <Tooltip formatter={(value: any, name: string, props: any) => [`${props.payload.absolute_value.toFixed(2)} كجم (${value.toFixed(1)}%)`, name]} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
             </Card>
             <Card className="p-6">
               <h3 className="font-semibold mb-4">التفاصيل حسب الفئة</h3>
-              <div className="space-y-4">
-                {categoryData.map((category, index) => (
+              <div className="space-y-4 pt-4">
+                {categoryData.length > 0 ? categoryData.map((cat, index) => (
                   <div key={index} className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-4 h-4 rounded" style={{ backgroundColor: category.color }} />
-                      <span className="font-medium">{category.name}</span>
+                      <div className="w-4 h-4 rounded" style={{ backgroundColor: cat.color }} />
+                      <span className="font-medium">{cat.name}</span>
                     </div>
                     <div className="text-right">
-                      <p className="font-semibold">{category.value.toFixed(1)}%</p>
-                      <p className="text-sm text-muted-foreground">{category.absolute_value.toFixed(1)} كجم CO₂</p>
+                      <p className="font-semibold">{cat.absolute_value.toFixed(2)} كجم</p>
+                      <p className="text-sm text-muted-foreground">{cat.value.toFixed(1)}%</p>
                     </div>
                   </div>
-                ))}
+                )) : <p className='text-muted-foreground text-center'>لا توجد بيانات لهذه الفترة</p>}
               </div>
             </Card>
           </div>
@@ -239,15 +242,15 @@ export default function CarbonStats() {
 
         <TabsContent value="comparison">
           <Card className="p-6">
-            <h3 className="font-semibold mb-4">مقارنة الأداء (إجمالي التوفير)</h3>
-            <div className="h-64">
+            <h3 className="font-semibold mb-4">مقارنة إجمالي التوفير</h3>
+            <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={comparisonData} layout="vertical">
+                <BarChart data={comparisonData} layout="vertical" margin={{ right: 30 }}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <YAxis type="category" dataKey="category" width={80} />
-                  <XAxis type="number" />
-                  <Tooltip formatter={(value: any) => [`${Number(value).toFixed(2)} كجم`, 'إجمالي التوفير']} />
-                  <Bar dataKey="carbon" radius={[0, 4, 4, 0]}>
+                  <YAxis type="category" dataKey="category" width={80} tick={{ fill: '#333' }} />
+                  <XAxis type="number" unit=" كجم" />
+                  <Tooltip formatter={(value: any) => [`${Number(value).toFixed(2)} كجم`, 'إجمالي التوفير']} cursor={{fill: '#f1f5f9'}} />
+                  <Bar dataKey="value" radius={[0, 4, 4, 0]}>
                     {comparisonData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
                   </Bar>
                 </BarChart>
@@ -256,24 +259,6 @@ export default function CarbonStats() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="monthly">
-          <Card className="p-6">
-            <h3 className="font-semibold mb-4">الاتجاه الشهري</h3>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={monthlyData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis yAxisId="carbon" orientation="right" label={{ value: 'كجم CO₂', angle: -90, position: 'insideRight' }}/>
-                  <YAxis yAxisId="points" orientation="left" label={{ value: 'النقاط', angle: 90, position: 'insideLeft' }}/>
-                  <Tooltip />
-                  <Line yAxisId="carbon" type="monotone" dataKey="carbon" stroke="#dc2626" name="توفير الكربون" />
-                  <Line yAxisId="points" type="monotone" dataKey="points" stroke="#16a34a" name="النقاط المكتسبة" />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </Card>
-        </TabsContent>
       </Tabs>
     </div>
   );

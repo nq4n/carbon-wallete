@@ -28,6 +28,7 @@ import {
 interface ActivityForm {
   type: 'transport' | 'energy' | 'waste' | 'food' | '';
   description: string;
+  notes: string;
   amount: string;
   unit: string;
   location?: string;
@@ -90,6 +91,7 @@ export default function ActivityLogger({ onSaved }: { onSaved: () => void }) {
   const [form, setForm] = useState<ActivityForm>({
     type: '',
     description: '',
+    notes: '',
     amount: '',
     unit: ''
   });
@@ -104,11 +106,12 @@ export default function ActivityLogger({ onSaved }: { onSaved: () => void }) {
 
     const amount = toNum(form.amount, 0);
     const factor = toNum(selectedOption?.carbonFactor, 0);
+    const pointsPerUnit = Math.round(factor * 10);
 
     if (selectedOption && form.amount) {
         if (amount > 0 && factor > 0) {
             const carbonSaved = amount * factor;
-            const pointsEarned = Math.round(carbonSaved * 10);
+            const pointsEarned = amount * pointsPerUnit;
             setCalculatedImpact({ carbonSaved, pointsEarned });
         } else {
             setCalculatedImpact({ carbonSaved: 0, pointsEarned: 0 });
@@ -120,7 +123,7 @@ export default function ActivityLogger({ onSaved }: { onSaved: () => void }) {
 
 
   const handleTypeChange = (type: string) => {
-    setForm(prev => ({ ...prev, type: type as any, amount: '', unit: '' }));
+    setForm(prev => ({ ...prev, type: type as any, amount: '', unit: '', description: '', notes: '' }));
     setSelectedOption(null);
   };
 
@@ -141,6 +144,7 @@ export default function ActivityLogger({ onSaved }: { onSaved: () => void }) {
       amount: String(qrData.amount),
       unit: qrData.unit,
       location: qrData.location,
+      notes: qrData.notes || '',
       qrScanned: true,
       verified: qrData.verified
     });
@@ -150,6 +154,7 @@ export default function ActivityLogger({ onSaved }: { onSaved: () => void }) {
     setCalculatedImpact({ carbonSaved, pointsEarned });
 
     setSelectedOption({
+      value: qrData.code,
       label: qrData.description,
       carbonFactor: qrData.carbonFactor
     });
@@ -160,19 +165,17 @@ export default function ActivityLogger({ onSaved }: { onSaved: () => void }) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!calculatedImpact || !user) return;
+    if (!calculatedImpact || !user || !form.type || !selectedOption) return;
 
-    const { error } = await supabase.rpc("log_activity_and_earn", {
+    const { data, error } = await supabase.rpc("log_activity_final", {
         p_user_id: user.id,
-        p_kind: form.type,
-        p_description: form.description,
-        p_amount: toNum(form.amount) || 1,
-        p_unit: form.unit || "unit",
-        p_carbon_factor: toNum(selectedOption?.carbonFactor) || 0,
-        p_points: calculatedImpact.pointsEarned || 0,
-        p_location: form.location || null,
-        p_catalog_id: null,
-        p_verified: form.verified || false,
+        p_activity_code: selectedOption.value,
+        p_activity_name: form.description,
+        p_activity_kind_text: form.type,
+        p_quantity: toNum(form.amount),
+        p_carbon_factor: toNum(selectedOption.carbonFactor),
+        p_unit: form.unit,
+        p_notes: form.notes
     });
 
     if (error) {
@@ -180,14 +183,14 @@ export default function ActivityLogger({ onSaved }: { onSaved: () => void }) {
         return;
     }
 
-    toast.success("تم تسجيل النشاط بنجاح!");
+    toast.success(`تم تسجيل النشاط بنجاح! +${data} نقطة`);
     onSaved();
     setIsOpen(false);
     resetForm();
   };
 
   const resetForm = () => {
-    setForm({ type: '', description: '', amount: '', unit: '' });
+    setForm({ type: '', description: '', notes: '', amount: '', unit: '' });
     setSelectedOption(null);
     setCalculatedImpact(null);
   };
@@ -323,13 +326,13 @@ export default function ActivityLogger({ onSaved }: { onSaved: () => void }) {
                 </Card>
               )}
 
-              {!form.qrScanned &&
+              {!form.qrScanned && selectedOption &&
                 <div className="space-y-2">
                   <Label>ملاحظات إضافية (اختياري)</Label>
                   <Textarea
                     placeholder="أضف أي ملاحظات حول هذا النشاط..."
-                    value={form.description}
-                    onChange={(e) => setForm(prev => ({ ...prev, description: e.target.value }))}
+                    value={form.notes}
+                    onChange={(e) => setForm(prev => ({ ...prev, notes: e.target.value }))}
                   />
                 </div>
               }

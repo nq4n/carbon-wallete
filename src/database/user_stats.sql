@@ -3,93 +3,97 @@ returns json
 language plpgsql
 as $$
 declare
-  user_total_saved numeric;
-  department_avg_saved numeric;
-  university_avg_saved numeric;
-  user_rank int;
-  weekly_improvement numeric;
-  top_activity_kind text;
+  v_user_total_saved numeric;
+  v_department_avg_saved numeric;
+  v_university_avg_saved numeric;
+  v_user_rank int;
+  v_weekly_improvement numeric;
+  v_top_activity_kind text;
+  v_user_department text;
 begin
-  -- Get user's total savings
-  select coalesce(sum(carbon_saved_kg), 0) into user_total_saved
-  from public.activity_logs
+  -- 1. Get user's total savings
+  select coalesce(sum(carbon_saved), 0) into v_user_total_saved
+  from public.activity_log
   where user_id = p_user_id;
 
-  -- Get user's department
-  declare
-    user_dept text;
-  begin
-    select department into user_dept from public.user_profiles where id = p_user_id;
+  -- 2. Get user's department for department-level stats
+  select department into v_user_department from public.user_profiles where id = p_user_id;
 
-    -- Calculate department average
-    select avg(total_carbon)
-    into department_avg_saved
-    from (
-      select sum(carbon_saved_kg) as total_carbon
-      from public.activity_logs al
-      join public.user_profiles up on al.user_id = up.id
-      where up.department = user_dept
-      group by al.user_id
-    ) as dept_totals;
-  end;
-
-  -- Calculate university average
+  -- 3. Calculate department average
   select avg(total_carbon)
-  into university_avg_saved
+  into v_department_avg_saved
   from (
-    select sum(carbon_saved_kg) as total_carbon
-    from public.activity_logs
+    select sum(al.carbon_saved) as total_carbon
+    from public.activity_log al
+    join public.user_profiles up on al.user_id = up.id
+    where up.department = v_user_department
+    group by al.user_id
+  ) as dept_totals;
+
+  -- 4. Calculate university-wide average
+  select avg(total_carbon)
+  into v_university_avg_saved
+  from (
+    select sum(carbon_saved) as total_carbon
+    from public.activity_log
     group by user_id
   ) as uni_totals;
 
-  -- Get user's rank
-  with user_totals as (
-    select user_id, sum(carbon_saved_kg) as total_carbon
-    from public.activity_logs
+  -- 5. Get user's rank based on total carbon saved
+  with user_ranks as (
+    select
+      user_id,
+      rank() over (order by sum(carbon_saved) desc) as rank
+    from public.activity_log
     group by user_id
-    order by total_carbon desc
   )
-  select rank into user_rank from (
-    select user_id, row_number() over () as rank from user_totals
-  ) as ranked_users where user_id = p_user_id;
+  select rank into v_user_rank from user_ranks where user_id = p_user_id;
   
-  -- Weekly improvement
+  if v_user_rank is null then
+      select count(*) + 1 into v_user_rank from public.user_profiles;
+  end if;
+
+  -- 6. Calculate weekly improvement
   declare
     this_week_saved numeric;
     last_week_saved numeric;
   begin
-    select coalesce(sum(carbon_saved_kg), 0) into this_week_saved
-    from public.activity_logs
+    select coalesce(sum(carbon_saved), 0) into this_week_saved
+    from public.activity_log
     where user_id = p_user_id and created_at >= date_trunc('week', now());
 
-    select coalesce(sum(carbon_saved_kg), 0) into last_week_saved
-    from public.activity_logs
-    where user_id = p_user_id 
+    select coalesce(sum(carbon_saved), 0) into last_week_saved
+    from public.activity_log
+    where user_id = p_user_id
       and created_at >= date_trunc('week', now() - interval '1 week')
       and created_at < date_trunc('week', now());
 
     if last_week_saved > 0 then
-      weekly_improvement := (this_week_saved - last_week_saved) / last_week_saved * 100;
+      v_weekly_improvement := ((this_week_saved - last_week_saved) / last_week_saved) * 100;
+    elsif this_week_saved > 0 then
+      v_weekly_improvement := 100;
     else
-      weekly_improvement := 0;
+      v_weekly_improvement := 0;
     end if;
   end;
-  
-  -- Top activity kind
-  select kind into top_activity_kind
-  from public.activity_logs
-  where user_id = p_user_id
-  group by kind
-  order by sum(carbon_saved_kg) desc
+
+  -- 7. Find the most frequent activity *kind*
+  select ac.kind::text into v_top_activity_kind
+  from public.activity_log al
+  join public.activity_catalog ac on al.activity_code = ac.code
+  where al.user_id = p_user_id
+  group by ac.kind
+  order by count(*) desc
   limit 1;
 
+  -- 8. Return all stats as a single JSON object
   return json_build_object(
-    'user_total', user_total_saved,
-    'department_avg', department_avg_saved,
-    'university_avg', university_avg_saved,
-    'rank', user_rank,
-    'weekly_improvement_pct', weekly_improvement,
-    'top_activity', top_activity_kind
+    'totalCarbonSaved', coalesce(v_user_total_saved, 0),
+    'departmentAverage', coalesce(v_department_avg_saved, 0),
+    'universityAverage', coalesce(v_university_avg_saved, 0),
+    'rank', coalesce(v_user_rank, 0),
+    'weeklyImprovement', coalesce(v_weekly_improvement, 0),
+    'topActivityKind', v_top_activity_kind
   );
 end;
 $$;
