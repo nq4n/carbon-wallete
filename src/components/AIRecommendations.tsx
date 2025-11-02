@@ -461,7 +461,7 @@ export default function AIRecommendations({ userData, disabled = true }: AIRecom
         {disabled && (
           <>
             <div className="pointer-events-none absolute inset-0 z-[90] bg-background/85 backdrop-blur-sm" aria-hidden="true" />
-            <div className="absolute inset-0 z-[100] flex items-center justify-center p-4">
+            <div className="absolute inset-0 z-[100] flex items-start justify-center p-4">
               <Card className="pointer-events-auto p-8 text-center bg-background/95 shadow-lg">
                 <Lightbulb className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-xl font-bold mb-2">✨ قريباً! ✨</h3>

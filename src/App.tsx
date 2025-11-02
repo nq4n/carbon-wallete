@@ -50,6 +50,7 @@ import {
 import greenPulseLogo from "figma:asset/2c1ec6a90a7fc9cfca4f45b98c3e9ac1918a1565.png";
 import { ImageWithFallback } from "./components/figma/ImageWithFallback";
 import { Toaster } from './components/ui/sonner';
+import GrowingTreeBackground from "./components/auth/GrowingTreeBackground";
 
 function AppContent() {
   const { user, profile, loading, signOut } = useAuthContext();
@@ -126,9 +127,18 @@ function AppContent() {
   };
 
   return (
-    <div className="min-h-screen bg-background" dir="rtl">
-      <header className="border-b bg-card">
-        <div className="container mx-auto px-4 py-4 bg-[rgba(32,227,227,0.35)]">
+    <div className="relative min-h-screen bg-background z-[1]" dir="rtl">
+      <GrowingTreeBackground
+        isAnimating={true}
+        color="rgba(32,227,227,0.35)"
+        hoverColor="rgba(28,233,233,0.57)"
+        lineWidth={1}
+        speed={1}
+        density={8}
+        fade={0.05}
+      />
+      <header className="border-b bg-transparent">
+        <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="flex-shrink-0">
@@ -174,8 +184,8 @@ function AppContent() {
 
       <div className="container mx-auto px-4 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <div className="mb-6 bg-[rgba(28,233,233,0.57)]">
-            <TabsList className="grid w-full grid-cols-9 h-12 text-xs">
+          <div className="mb-6">
+            <TabsList className="grid w-full grid-cols-9 h-12 text-xs bg-transparent">
                  <TabsTrigger value="dashboard"><Home className="w-4 h-4" /><span className="hidden lg:inline">لوحة التحكم</span></TabsTrigger>
                  <TabsTrigger value="learning"><BookOpen className="w-4 h-4" /><span className="hidden lg:inline">التعلم</span></TabsTrigger>
                  <TabsTrigger value="quiz"><Brain className="w-4 h-4" /><span className="hidden lg:inline">الاختبارات</span></TabsTrigger>
