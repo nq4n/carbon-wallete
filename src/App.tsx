@@ -91,7 +91,7 @@ function AppContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-4">
           <Loader2 className="w-16 h-16 mx-auto animate-spin text-primary" />
           <p className="text-muted-foreground">جاري التحميل...</p>
@@ -104,11 +104,9 @@ function AppContent() {
     return <LoginForm />;
   }
 
-  // FIX: Add a check for the profile object before trying to access its properties.
-  // This prevents a crash if the user is loaded but the profile isn't yet.
   if (!profile) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-4">
           <Loader2 className="w-16 h-16 mx-auto animate-spin text-primary" />
           <p className="text-muted-foreground">جاري تحميل بيانات الملف الشخصي...</p>
@@ -127,7 +125,7 @@ function AppContent() {
   };
 
   return (
-    <div className="relative min-h-screen bg-background z-[1]" dir="rtl">
+    <div className="relative min-h-screen z-[1]" dir="rtl">
       <GrowingTreeBackground
         isAnimating={true}
         color="rgba(32,227,227,0.35)"
