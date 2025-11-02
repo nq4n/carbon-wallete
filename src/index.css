@@ -3208,3 +3208,118 @@ html {
     transform: translate3d(var(--tw-exit-translate-x, 0), var(--tw-exit-translate-y, 0), 0) scale3d(var(--tw-exit-scale, 1), var(--tw-exit-scale, 1), var(--tw-exit-scale, 1)) rotate(var(--tw-exit-rotate, 0));
   }
 }
+
+
+:root {
+  --gp-accent: #138a56;
+  --gp-shadow: 0 18px 50px rgba(0, 0, 0, 0.1);
+  --gp-radius: 20px;
+}
+.showcase {
+  width: min(1200px, 95vw);
+  backdrop-filter: blur(12px);
+  background: rgba(255, 255, 255, 0.65);
+  border-radius: var(--gp-radius);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: var(--gp-shadow);
+  padding: 22px;
+}
+.hero {
+  position: relative;
+  height: 320px;
+  border-radius: 16px;
+  overflow: hidden;
+}
+.hero img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: 0.8s;
+}
+.hero img.active {
+  opacity: 1;
+}
+.hero:after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.08) 60%);
+}
+.hero-text {
+  position: absolute;
+  bottom: 18px;
+  right: 18px;
+  z-index: 2;
+  color: white;
+}
+.hero-text h2 {
+  margin: 0;
+  font-weight: 800;
+  font-size: 28px;
+}
+.hero-text p {
+  margin: 0;
+  opacity: 0.95;
+}
+
+.trio {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-top: 18px;
+}
+.trio img {
+  width: 100%;
+  height: 150px;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.characters {
+  position: relative;
+  height: 200px;
+  margin-top: 12px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(19, 138, 86, 0.06), transparent 80%);
+}
+.characters img {
+  position: absolute;
+  bottom: -8px;
+  height: 210px;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.12));
+  animation: float 5.5s ease-in-out infinite;
+}
+.man {
+  left: 10px;
+}
+.woman {
+  right: 10px;
+}
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+.gallery {
+  margin-top: 24px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+.gallery img {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
