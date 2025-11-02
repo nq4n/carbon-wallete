@@ -1,37 +1,17 @@
-'use client';
-import { Card } from '../ui/card'
-import { Button } from '../ui/button'
-import { Input } from '../ui/input'
-import { Label } from '../ui/label'
-import { Alert } from '../ui/alert'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select'
-import { useAuthContext } from './AuthProvider'
-import { 
-  Eye, 
-  EyeOff, 
-  Mail, 
-  Lock, 
-  User, 
-  GraduationCap, 
-  Briefcase,
-  Loader2,
-  AlertCircle,
-  Leaf,
-  Users,
-  Award
-} from 'lucide-react'
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
-const LOGO = './assets/logo.png';
+import { Eye, EyeOff, Mail, Lock, User, GraduationCap, Briefcase, Loader2, AlertCircle } from 'lucide-react';
+
+/* ---------- Configuration ---------- */
+const LOGO = '/assets/logo.png';
 const CHAPTERS = [
-  { title: 'من نحن', src: './assets/photos/who_are_we.jpg', subtitle: 'رحلة النبض الأخضر تبدأ من هنا' },
-  { title: 'رؤيتنا', src: './assets/photos/our_vission.jpg', subtitle: 'نحو مستقبل مستدام للأجيال القادمة' },
-  { title: 'رسالتنا', src: './assets/photos/our_massage.jpg', subtitle: 'نشر الوعي البيئي في كل مكان' },
-  { title: 'نشاط 1', src: './assets/photos/activity_1.jpg', subtitle: 'مبادرات تحدث الفرق' },
-  { title: 'نشاط 2', src: './assets/photos/activity_2.jpg', subtitle: 'معاً نحو التغيير الإيجابي' },
-  { title: 'نشاط 3', src: './assets/photos/activity_3.jpg', subtitle: 'خطوات عملية نحو الاستدامة' },
-  { title: 'نشاط 4', src: './assets/photos/activity_4.jpg', subtitle: 'تأثير حقيقي في المجتمع' },
-  { title: 'نشاط 5', src: './assets/photos/activity_5.jpg', subtitle: 'ابتكارات خضراء للمستقبل' },
+  { title: 'من نحن', src: '/assets/photos/who_are_we.jpg', subtitle: 'رحلة النبض الأخضر تبدأ من هنا' },
+  { title: 'رؤيتنا', src: '/assets/photos/our_vission.jpg', subtitle: 'نحو مستقبل مستدام للأجيال القادمة' },
+  { title: 'رسالتنا', src: '/assets/photos/our_massage.jpg', subtitle: 'نشر الوعي البيئي في كل مكان' },
+  { title: 'نشاط 1', src: '/assets/photos/activity_1.jpg', subtitle: 'مبادرات تحدث الفرق' },
+  { title: 'نشاط 2', src: '/assets/photos/activity_2.jpg', subtitle: 'معاً نحو التغيير الإيجابي' },
+  { title: 'نشاط 3', src: '/assets/photos/activity_3.jpg', subtitle: 'خطوات عملية نحو الاستدامة' },
+  { title: 'نشاط 4', src: '/assets/photos/activity_4.jpg', subtitle: 'تأثير حقيقي في المجتمع' },
+  { title: 'نشاط 5', src: '/assets/photos/activity_5.jpg', subtitle: 'ابتكارات خضراء للمستقبل' },
 ];
 
 /* ---------- Subcomponents ---------- */
@@ -194,35 +174,35 @@ const LoginSection = ({ currentStage, totalStages }) => {
     ]
   };
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsSubmitting(true)
+  const handleLogin = async (e) => {
+    e.preventDefault();
     if (isSubmitting) return;
-    setError('')
-    setIsAnimating(false);
-
+    setIsSubmitting(true);
+    setError('');
+    
+    // Simulating API call - Replace with actual authentication
     try {
-      const { error } = await signIn(loginData.email, loginData.password)
-      
-      if (error) {
-        setError(error.message === 'Invalid login credentials' 
-          ? 'بيانات تسجيل الدخول غير صحيحة'
-          : 'حدث خطأ في تسجيل الدخول'
-        )
-        setIsAnimating(true);
+      // Demo account check
+      if (loginData.email === 'demo@squ.edu.om' && loginData.password === 'demo123') {
+        setTimeout(() => {
+          alert('تم تسجيل الدخول بنجاح! (Demo Account)');
+          setIsSubmitting(false);
+        }, 1000);
       } else {
-        toast.success('تم تسجيل الدخول بنجاح!')
+        setTimeout(() => {
+          setError('بيانات تسجيل الدخول غير صحيحة');
+          setIsSubmitting(false);
+        }, 1000);
       }
     } catch (err) {
-      setError('حدث خطأ غير متوقع')
-      console.error('Login error:', err)
-      setIsAnimating(true);
-    } finally {
-      setIsSubmitting(false)
+      setError('حدث خطأ غير متوقع');
+      setIsSubmitting(false);
     }
-  }
+  };
+
   const handleSignUp = async (e) => {
     e.preventDefault();
+    if (isSubmitting) return;
     setIsSubmitting(true);
     setError('');
 
@@ -238,11 +218,24 @@ const LoginSection = ({ currentStage, totalStages }) => {
       return;
     }
 
-    setTimeout(() => {
-      setError('');
+    if (!signUpData.department) {
+      setError('يرجى اختيار الكلية أو القسم');
       setIsSubmitting(false);
-      alert('تم إنشاء الحساب بنجاح!');
-    }, 1500);
+      return;
+    }
+
+    // Simulating API call - Replace with actual registration
+    try {
+      setTimeout(() => {
+        alert(`تم إنشاء الحساب بنجاح!\nالاسم: ${signUpData.name}\nالنوع: ${signUpData.user_type === 'student' ? 'طالب' : 'موظف'}\nالجنس: ${signUpData.gender === 'male' ? 'ذكر' : 'أنثى'}`);
+        setIsSubmitting(false);
+        // Switch to login tab after successful signup
+        setActiveTab('login');
+      }, 1500);
+    } catch (err) {
+      setError('حدث خطأ غير متوقع');
+      setIsSubmitting(false);
+    }
   };
 
   const isActive = currentStage === totalStages;
