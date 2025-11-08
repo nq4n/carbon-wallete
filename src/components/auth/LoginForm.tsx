@@ -87,7 +87,6 @@ const AnimatedPath = ({ pathRef, d, progress, pathLength }) => {
 /* ---------- Login Section (موصول بـ AuthProvider) ---------- */
 const LoginSection = ({ currentStage, totalStages }) => {
   const { signIn, signUp } = useAuthContext()
-  const [isAnimating, setIsAnimating] = useState(true)
   const [activeTab, setActiveTab] = useState('login')
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
@@ -152,8 +151,6 @@ const LoginSection = ({ currentStage, totalStages }) => {
     if (isSubmitting) return
     setIsSubmitting(true)
     setError('')
-    setIsAnimating(false)
-
     try {
       const email = loginData.email.trim().toLowerCase()
       const password = loginData.password
@@ -166,14 +163,12 @@ const LoginSection = ({ currentStage, totalStages }) => {
             ? 'بيانات تسجيل الدخول غير صحيحة'
             : 'حدث خطأ في تسجيل الدخول'
         )
-        setIsAnimating(true)
       } else {
         toast.success('تم تسجيل الدخول بنجاح!')
       }
     } catch (err) {
       console.error('Login error:', err)
       setError('حدث خطأ غير متوقع')
-      setIsAnimating(true)
     } finally {
       setIsSubmitting(false)
     }
@@ -184,7 +179,6 @@ const LoginSection = ({ currentStage, totalStages }) => {
     if (isSubmitting) return
     setIsSubmitting(true)
     setError('')
-    setIsAnimating(false)
 
     const email = signUpData.email.trim().toLowerCase()
     const password = signUpData.password
@@ -193,19 +187,16 @@ const LoginSection = ({ currentStage, totalStages }) => {
     if (password !== confirm) {
       setError('كلمات المرور غير متطابقة')
       setIsSubmitting(false)
-      setIsAnimating(true)
       return
     }
     if (password.length < 6) {
       setError('كلمة المرور يجب أن تكون 6 أحرف على الأقل')
       setIsSubmitting(false)
-      setIsAnimating(true)
       return
     }
     if (!signUpData.department) {
       setError('يرجى اختيار الكلية أو القسم')
       setIsSubmitting(false)
-      setIsAnimating(true)
       return
     }
 
@@ -224,13 +215,12 @@ const LoginSection = ({ currentStage, totalStages }) => {
             ? 'هذا البريد الإلكتروني مسجل مسبقاً'
             : 'حدث خطأ في إنشاء الحساب'
         )
-        setIsAnimating(true)
+
       } else if (data?.user) {
         toast.success('تم إنشاء الحساب بنجاح! جاري تسجيل الدخول...')
         const { error: signInError } = await signIn(email, password)
         if (signInError) {
           setError('حدث خطأ أثناء تسجيل الدخول التلقائي')
-          setIsAnimating(true)
         } else {
           // الدخول تم بنجاح
         }
@@ -240,7 +230,6 @@ const LoginSection = ({ currentStage, totalStages }) => {
     } catch (err) {
       console.error('SignUp error:', err)
       setError('حدث خطأ غير متوقع')
-      setIsAnimating(true)
     } finally {
       setIsSubmitting(false)
     }
