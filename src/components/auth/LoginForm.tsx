@@ -87,13 +87,13 @@ const AnimatedPath = ({ pathRef, d, progress, pathLength }) => {
 /* ---------- Login Section (موصول بـ AuthProvider) ---------- */
 const LoginSection = ({ currentStage, totalStages }) => {
   const { signIn, signUp } = useAuthContext()
-
+  const [isAnimating, setIsAnimating] = useState(true)
   const [activeTab, setActiveTab] = useState('login')
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
-  const [isAnimating, setIsAnimating] = useState(true)
+  
 
   const [loginData, setLoginData] = useState({
     email: '',
