@@ -6,7 +6,7 @@ security definer
 set search_path = public
 as $$
 begin
-  insert into public.user_profiles (id, email, name, user_type, university_id, department, avatar_url)
+  insert into public.user_profiles (id, email, name, user_type, university_id, department, gender, avatar_url)
   values (
     new.id,
     coalesce(new.email, new.raw_user_meta_data->>'email'),
@@ -14,6 +14,7 @@ begin
     coalesce(new.raw_user_meta_data->>'user_type', 'student'),
     coalesce(new.raw_user_meta_data->>'university_id', 'N/A'),
     coalesce(new.raw_user_meta_data->>'department', 'N/A'),
+    coalesce(new.raw_user_meta_data->>'gender', 'male'),
     new.raw_user_meta_data->>'avatar_url'
   )
   on conflict (id) do nothing;

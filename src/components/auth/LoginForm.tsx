@@ -879,8 +879,8 @@ export default function PreAuthShowcaseCentered() {
           border:'1px solid rgba(16,185,129,.15)', borderRadius:999, padding:'10px 20px',
           boxShadow:'0 12px 32px rgba(2,6,23,.08), 0 0 0 1px rgba(16,185,129,.05)',
         }}>
-          <img src={LOGO} alt="Logo" style={{ width:76, height:76, objectFit:'contain' }}/>
-          <strong style={{ fontSize:18, letterSpacing:'0.3px' }}>النبض الأخضر</strong>
+          <img src={LOGO} alt="Logo" style={{ width:90, height:90, objectFit:'contain' }}/>
+          <strong style={{ fontSize:25, letterSpacing:'0.3px' }}>النبض الأخضر</strong>
         </div>
         <AnimatedPath pathRef={pathRef} d={pathD} progress={scrollProgress} pathLength={pathLength}/>
       </div>
