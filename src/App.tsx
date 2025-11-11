@@ -25,6 +25,7 @@ import CarbonDashboard from "./components/CarbonDashboard";
 import ActivityLogger from "./components/ActivityLogger";
 import CarbonStats from "./components/CarbonStats";
 import RewardsCenter from "./components/RewardsCenter";
+import UserCoupons from "./components/UserCoupons";
 import InteractiveMap from "./components/InteractiveMap";
 import GreenStore from "./components/GreenStore";
 import EcoLearningCenter from "./components/EcoLearningCenter";
@@ -38,7 +39,6 @@ import {
   User,
   Lock,
   Bell,
-  Leaf,
   GraduationCap,
   Briefcase,
   MapPin,
@@ -236,6 +236,7 @@ function AppContent() {
                      <div><label className="text-sm text-muted-foreground">البريد الإلكتروني</label><p className="font-medium">{user?.email}</p></div>
                     <div>
                       <label className="text-sm text-muted-foreground">نوع المستخدم</label>
+                      <br></br>
                       <Badge variant="outline" className="mt-1">
                         {userData.type === "student" ? <><GraduationCap className="w-4 h-4 ml-1" />طالب</> : <><Briefcase className="w-4 h-4 ml-1" />موظف</>}
                       </Badge>
@@ -262,7 +263,9 @@ function AppContent() {
                     </div>
                     <div>
                       <label className="text-sm text-muted-foreground">الترتيب العام</label>
-                      <p className="font-semibold">#{profileStats.rank} من أصل {profileStats.totalUsers} مستخدم</p>
+                      <br></br>
+                      <label className="text-2xl font-bold text-green-600">#{profileStats.rank}</label>
+                      <p className="font-semibold"> من أصل {profileStats.totalUsers} مستخدم</p>
                     </div>
                   </div>
                 </div>
@@ -274,6 +277,7 @@ function AppContent() {
                 </div>
               </Card>
             </div>
+            <UserCoupons />
           </TabsContent>
         </Tabs>
       </div>
