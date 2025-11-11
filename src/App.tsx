@@ -30,6 +30,7 @@ import GreenStore from "./components/GreenStore";
 import EcoLearningCenter from "./components/EcoLearningCenter";
 import EcoQuizzes from "./components/EcoQuizzes";
 import AIRecommendations from "./components/AIRecommendations";
+import ChangePasswordDialog from "./components/ChangePasswordDialog";
 import {
   Home,
   BarChart3,
@@ -55,6 +56,7 @@ import GrowingTreeBackground from "./components/auth/GrowingTreeBackground";
 function AppContent() {
   const { user, profile, loading, signOut } = useAuthContext();
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const [profileStats, setProfileStats] = useState({
     rank: 0,
     totalUsers: 0,
@@ -65,7 +67,6 @@ function AppContent() {
     if (!user || !profile) return;
 
     const fetchProfileData = async () => {
-      // Fetch rank from the user_rankings table
       const { data: rankingData } = await supabase
         .from('user_rankings')
         .select('rank')
@@ -73,7 +74,7 @@ function AppContent() {
         .single();
       
       const { count } = await supabase
-        .from('user_profiles')
+        .from('user_rankings')
         .select('*', { count: 'exact', head: true });
 
       const { data: goal } = await supabase
@@ -243,9 +244,6 @@ function AppContent() {
                     <div><label className="text-sm text-muted-foreground">{userData.type === "student" ? "الرقم الجامعي" : "الرقم الوظيفي"}</label><p className="font-medium">{userData.id}</p></div>
                     <div><label className="text-sm text-muted-foreground">{userData.type === "student" ? "التخصص" : "القسم"}</label><p className="font-medium">{userData.department}</p></div>
                     <div><label className="text-sm text-muted-foreground">المستوى البيئي</label><Badge className="bg-green-600">{userData.level}</Badge></div>
-                    <div className="mt-6 pt-4 border-t">
-                  <Button variant="outline" className="w-full"><Lock className="w-4 h-4 ml-2" />تغير كلمة المرور</Button>
-                </div>
                   </div>
                 </div>
               </Card>
@@ -264,17 +262,23 @@ function AppContent() {
                     </div>
                     <div>
                       <label className="text-sm text-muted-foreground">الترتيب العام</label>
-                      <label className="text-2xl font-bold text-green-600">#{profileStats.rank}</label>
-                      <p className="font-semibold"> من أصل {profileStats.totalUsers} مستخدم</p>
+                      <p className="font-semibold">#{profileStats.rank} من أصل {profileStats.totalUsers} مستخدم</p>
                     </div>
                   </div>
                 </div>
-                
+                <div className="mt-6 pt-4 border-t">
+                  <Button variant="outline" className="w-full" onClick={() => setIsChangePasswordOpen(true)}>
+                    <Lock className="w-4 h-4 ml-2" />
+                    تغيير كلمة المرور
+                  </Button>
+                </div>
               </Card>
             </div>
           </TabsContent>
         </Tabs>
       </div>
+
+      <ChangePasswordDialog isOpen={isChangePasswordOpen} onOpenChange={setIsChangePasswordOpen} />
 
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-card border-t">
          <div className="grid grid-cols-6 h-16 text-xs">

@@ -17,6 +17,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { toast } from 'sonner';
 import { Eye, EyeOff, Lock, Loader2, Mail } from 'lucide-react';
+import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSeparator } from './ui/input-otp';
 
 interface ChangePasswordDialogProps {
   isOpen: boolean;
@@ -42,9 +43,8 @@ export default function ChangePasswordDialog({ isOpen, onOpenChange }: ChangePas
     setLoading(true);
     setError('');
 
-    const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
-      redirectTo: '#', // We don't need a redirect, but it's required by Supabase
-    });
+    // This function will now trigger the OTP email template you configured in Supabase.
+    const { error } = await supabase.auth.resetPasswordForEmail(user.email);
 
     setLoading(false);
     if (error) {
@@ -52,7 +52,7 @@ export default function ChangePasswordDialog({ isOpen, onOpenChange }: ChangePas
       toast.error('فشل إرسال رمز التحقق.');
     } else {
       setStep('otp_sent');
-      toast.success('تم إرسال رمز التحقق إلى بريدك الإلكتروني. الرجاء التحقق من صندوق الوارد الخاص بك.');
+      toast.success('تم إرسال رمز التحقق إلى بريدك الإلكتروني.');
     }
   };
 
@@ -76,19 +76,21 @@ export default function ChangePasswordDialog({ isOpen, onOpenChange }: ChangePas
     setLoading(true);
     if (!user?.email) return;
 
-    const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
+    // First, verify the OTP
+    const { error: verifyError } = await supabase.auth.verifyOtp({
         email: user.email,
         token: otp,
         type: 'recovery',
     });
 
-    if (verifyError || !verifyData || !verifyData.user) {
+    if (verifyError) {
       setLoading(false);
       setError('رمز التحقق غير صالح أو منتهي الصلاحية.');
       toast.error('رمز التحقق غير صحيح.');
       return;
     }
 
+    // If OTP is valid, update the password
     const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
 
     setLoading(false);
@@ -135,30 +137,30 @@ export default function ChangePasswordDialog({ isOpen, onOpenChange }: ChangePas
         </DialogHeader>
         
         {step === 'otp_sent' ? (
-          <form onSubmit={handlePasswordChange} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="otp">رمز التحقق (OTP)</Label>
-              <Input
-                id="otp"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value)}
-                placeholder="123456"
-                maxLength={6}
-                required
-              />
+          <form onSubmit={handlePasswordChange} className="space-y-4 pt-4">
+            <div className="space-y-2 text-center">
+                <Label htmlFor="otp">رمز التحقق (OTP)</Label>
+                <div dir="ltr" className="flex justify-center">
+                    <InputOTP maxLength={6} value={otp} onChange={(value) => setOtp(value)}>
+                        <InputOTPGroup>
+                            <InputOTPSlot index={0} />
+                            <InputOTPSlot index={1} />
+                            <InputOTPSlot index={2} />
+                        </InputOTPGroup>
+                        <InputOTPSeparator />
+                        <InputOTPGroup>
+                            <InputOTPSlot index={3} />
+                            <InputOTPSlot index={4} />
+                            <InputOTPSlot index={5} />
+                        </InputOTPGroup>
+                    </InputOTP>
+                </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="new-password">كلمة المرور الجديدة</Label>
               <div className="relative">
-                <Input
-                  id="new-password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="********"
-                  required
-                />
-                <button type="button" onClick={() => setShowPassword((s) => !s)} className="absolute left-3 top-1/2 -translate-y-1/2">
+                <Input id="new-password" type={showPassword ? 'text' : 'password'} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="********" required />
+                <button type="button" onClick={() => setShowPassword((s) => !s)} className="absolute left-3 top-1/2 -translate-y-1/2 bg-transparent border-none">
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
@@ -166,24 +168,15 @@ export default function ChangePasswordDialog({ isOpen, onOpenChange }: ChangePas
             <div className="space-y-2">
               <Label htmlFor="confirm-password">تأكيد كلمة المرور الجديدة</Label>
               <div className="relative">
-                <Input
-                  id="confirm-password"
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="********"
-                  required
-                />
-                <button type="button" onClick={() => setShowConfirmPassword((s) => !s)} className="absolute left-3 top-1/2 -translate-y-1/2">
+                <Input id="confirm-password" type={showConfirmPassword ? 'text' : 'password'} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="********" required />
+                <button type="button" onClick={() => setShowConfirmPassword((s) => !s)} className="absolute left-3 top-1/2 -translate-y-1/2 bg-transparent border-none">
                   {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
             </div>
             {error && <p className="text-sm text-red-600">{error}</p>}
              <DialogFooter>
-                <DialogClose asChild>
-                    <Button type="button" variant="outline">إلغاء</Button>
-                </DialogClose>
+                <DialogClose asChild><Button type="button" variant="outline">إلغاء</Button></DialogClose>
                 <Button type="submit" disabled={loading}>
                   {loading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
                   تغيير كلمة المرور
