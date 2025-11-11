@@ -13,14 +13,22 @@ declare global {
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
-
 // (اختياري) تحقق إذا القيم حقيقية أم placeholder
 const hasRealCredentials =
   supabaseUrl && supabaseUrl !== "https://your-project.supabase.co" &&
   supabaseAnonKey && supabaseAnonKey !== "your-anon-key";
 
 console.log("Using real Supabase credentials:", hasRealCredentials);
+
+// If real credentials are not provided, fall back to an in-memory mock client
+// to avoid runtime "Failed to fetch" errors when the app calls the Supabase API.
+export const supabase = ((): ReturnType<typeof createClient> | any => {
+  if (hasRealCredentials) {
+    return createClient(supabaseUrl, supabaseAnonKey);
+  }
+  // use the mocked client for local/demo mode
+  return createMockSupabaseClient();
+})();
 
 // Export a flag to know if we're using mock or real Supabase
 export const isUsingMockAuth = !hasRealCredentials
