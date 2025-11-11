@@ -6,7 +6,9 @@ import greenPulseLogo from '../../assets/logo.png'
 import whoImg       from '../../assets/photos/who_are_we.jpg'
 import visionImg    from '../../assets/photos/our_vission.jpg'
 import messageImg   from '../../assets/photos/our_massage.jpg'
-
+import video1 from "../../assets/videos/video1.mp4";
+import video2 from "../../assets/videos/video2.mp4";
+import video3 from "../../assets/videos/video3.mp4";
 // activities (1..8)
 import activity1Img from '../../assets/photos/activity_1.jpg'
 import activity2Img from '../../assets/photos/activity_2.jpg'
@@ -30,9 +32,9 @@ const LOGO = greenPulseLogo
 
 // Only the three core chapters (no activity chapters)
 const CHAPTERS = [
-  { title: 'من نحن',  src: whoImg,    subtitle: 'رحلة النبض الأخضر تبدأ من هنا' },
-  { title: 'رؤيتنا',  src: visionImg, subtitle: 'نحو مستقبل مستدام للأجيال القادمة' },
-  { title: 'رسالتنا', src: messageImg,subtitle: 'نشر الوعي البيئي في كل مكان' },
+  { title: 'من نحن',  src: whoImg,    subtitle: 'نحن فريق النبض الأخضر، فريق طلابي تطوعي بجامعة السلطان قابوس، يسعى إلى نشر الوعي البيئي وتقليل البصمة الكربونية داخل الجامعة.' },
+  { title: 'رؤيتنا',  src: visionImg, subtitle: 'نحن فريق النبض الأخضر، فريق طلابي تطوعي بجامعة السلطان قابوس، يسعى إلى نشر الوعي البيئي وتقليل البصمة الكربونية داخل الجامعة. نؤمن أن التغيير يبدأ بخطوات صغيرة يومية، وأن الطالب قادر أن يكون صانع فرق في حماية البيئة وصون مواردها.'},
+  { title: 'رسالتنا', src: messageImg,subtitle: 'الإسهام في تقليل البصمة الكربونية في الجامعة من خلال نشر الوعي البيئي، وتنفيذ مبادرات عملية، وتحفيز الطلبة على تبني ممارسات يومية صديقة للبيئة.' },
 ]
 
 /* ---------- Shared subcomponents ---------- */
@@ -182,61 +184,273 @@ const ActivitiesSection = ({ images }:{ images:{src:string;alt:string}[] }) => {
   )
 }
 
+const FIXED_RATIO = false;
 
-/* ---------- Videos (two responsive players) ---------- */
+function formatTime(s) {
+  if (!isFinite(s)) return "0:00";
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  return `${m}:${sec < 10 ? "0" : ""}${sec}`;
+}
+const CARD_ASPECT = "1 / 1"; // "16 / 9" for landscape, "9 / 16" vertical
 const VideosSection = () => {
   return (
     <section
       style={{
-        minHeight:'60vh',
-        scrollSnapAlign:'center',
-        padding:'40px 0',
-        display:'flex',
-        alignItems:'center',
+        minHeight: "60vh",
+        scrollSnapAlign: "center",
+        padding: "40px 0",
+        display: "flex",
+        alignItems: "center",
       }}
     >
-      <div style={{ width:'100%' }}>
-        <div style={{ textAlign:'center', marginBottom:18 }}>
+      <div style={{ width: "100%" }}>
+        <div style={{ textAlign: "center", marginBottom: 18 }}>
           <div
             style={{
-              display:'inline-block',
-              background:'linear-gradient(135deg,#ecfeff 0%,#cffafe 100%)',
-              color:'#0369a1',
-              padding:'6px 16px',
-              borderRadius:999,
-              fontSize:13,
-              fontWeight:800,
-              border:'1px solid #bae6fd',
-              letterSpacing:'.4px',
+              display: "inline-block",
+              background: "linear-gradient(135deg,#ecfeff 0%,#cffafe 100%)",
+              color: "#0369a1",
+              padding: "6px 16px",
+              borderRadius: 999,
+              fontSize: 13,
+              fontWeight: 800,
+              border: "1px solid #bae6fd",
+              letterSpacing: ".4px",
             }}
           >
             فيديوهات
           </div>
-          <h3 style={{ fontSize:36, fontWeight:900, marginTop:12, color:'#0f172a' }}>مشاهد قصيرة توضح رسالتنا</h3>
+          <h3
+            style={{
+              fontSize: 36,
+              fontWeight: 900,
+              marginTop: 12,
+              color: "#0f172a",
+            }}
+          >
+            مشاهد قصيرة توضح رسالتنا
+          </h3>
         </div>
 
-        <div className="videos-grid" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20 }}>
-          <div style={{ background:'#fff', border:'1px solid rgba(2,6,23,.06)', borderRadius:20, overflow:'hidden', boxShadow:'0 24px 64px rgba(2,6,23,.12)' }}>
-            <video controls style={{ width:'100%', height:'auto', display:'block' }} poster={whoImg}>
-              <source src="/assets/videos/video1.mp4" type="video/mp4" />
-            </video>
-          </div>
-          <div style={{ background:'#fff', border:'1px solid rgba(2,6,23,.06)', borderRadius:20, overflow:'hidden', boxShadow:'0 24px 64px rgba(2,6,23,.12)' }}>
-            <video controls style={{ width:'100%', height:'auto', display:'block' }} poster={visionImg}>
-              <source src="/assets/videos/video2.mp4" type="video/mp4" />
-            </video>
-          </div>
+        {/* ✅ Fixed grid (no nested grid anymore) */}
+        <div
+          className="videos-grid"
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr 1fr",
+            gap: 20,
+          }}
+        >
+          {[video1, video2, video3].map((src, i) => (
+            <div
+              key={i}
+              style={{
+                background: "#fff",
+                border: "1px solid rgba(2,6,23,.06)",
+                borderRadius: 20,
+                overflow: "hidden",
+                boxShadow: "0 24px 64px rgba(2,6,23,.12)",
+              }}
+            >
+              <div
+                style={{
+                  width: "100%",
+                  aspectRatio: "16 / 9", // ✅ all equal size
+                  background: "#0b1220",
+                }}
+              >
+                <video
+                  src={src}
+                  playsInline
+                  muted
+                  controls={false} // ✅ remove controls
+                  preload="metadata"
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover", // ✅ makes vertical videos look same height
+                    display: "block",
+                  }}
+                  onClick={(e) => {
+                    const v = e.currentTarget;
+                    document
+                      .querySelectorAll("video")
+                      .forEach((x) => x !== v && x.pause());
+                    v.paused ? v.play() : v.pause();
+                  }}
+                />
+              </div>
+            </div>
+          ))}
         </div>
 
         <style>{`
           @media (max-width: 900px) {
-            .videos-grid { grid-template-columns: 1fr; gap: 14px; }
+            .videos-grid { 
+              grid-template-columns: 1fr; 
+              gap: 14px; 
+            }
           }
         `}</style>
       </div>
     </section>
-  )
-}
+  );
+};
+
+{/* ---------- Videos (three responsive players) ---------- */}
+<section
+  style={{
+    minHeight: '0',
+    scrollSnapAlign: 'auto',
+    padding: '16px 0 8px',
+    display: 'block',
+  }}
+>
+  <div style={{ width: '100%' }}>
+    <div style={{ textAlign: 'center', marginBottom: 12 }}>
+      <div
+        style={{
+          display: 'inline-block',
+          background: 'linear-gradient(135deg,#ecfeff 0%,#cffafe 100%)',
+          color: '#0369a1',
+          padding: '6px 16px',
+          borderRadius: 999,
+          fontSize: 12,
+          fontWeight: 800,
+          border: '1px solid #bae6fd',
+          letterSpacing: '.4px',
+        }}
+      >
+        فيديوهات
+      </div>
+      <h3
+        style={{
+          fontSize: 24,
+          fontWeight: 900,
+          marginTop: 10,
+          color: '#0f172a',
+        }}
+      >
+        مشاهد قصيرة توضح رسالتنا
+      </h3>
+    </div>
+
+    {/* same grid idea, just cleaned & extended to 3 cards */}
+    <div
+      className="videos-grid"
+      style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}
+    >
+      {/* Card 1 */}
+      <div
+        className="video-card"
+        style={{
+          background: '#fff',
+          border: '1px solid rgba(2,6,23,.06)',
+          borderRadius: 20,
+          overflow: 'hidden',
+          boxShadow: '0 24px 64px rgba(2,6,23,.12)',
+        }}
+      >
+        <div className="video-frame">
+          <video
+            src={video1}
+            playsInline
+            muted
+            preload="metadata"
+            // no native controls
+            controls={false}
+            onClick={(e) => {
+              const v = e.currentTarget as HTMLVideoElement;
+              // pause others
+              document
+                .querySelectorAll<HTMLVideoElement>('.videos-grid video')
+                .forEach((x) => x !== v && x.pause());
+              v.paused ? v.play() : v.pause();
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Card 2 */}
+      <div
+        className="video-card"
+        style={{
+          background: '#fff',
+          border: '1px solid rgba(2,6,23,.06)',
+          borderRadius: 20,
+          overflow: 'hidden',
+          boxShadow: '0 24px 64px rgba(2,6,23,.12)',
+        }}
+      >
+        <div className="video-frame">
+          <video
+            src={video2}
+            playsInline
+            muted
+            preload="metadata"
+            controls={false}
+            onClick={(e) => {
+              const v = e.currentTarget as HTMLVideoElement;
+              document
+                .querySelectorAll<HTMLVideoElement>('.videos-grid video')
+                .forEach((x) => x !== v && x.pause());
+              v.paused ? v.play() : v.pause();
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Card 3 */}
+      <div
+        className="video-card"
+        style={{
+          background: '#fff',
+          border: '1px solid rgba(2,6,23,.06)',
+          borderRadius: 20,
+          overflow: 'hidden',
+          boxShadow: '0 24px 64px rgba(2,6,23,.12)',
+        }}
+      >
+        <div className="video-frame">
+          <video
+            src={video3}
+            playsInline
+            muted
+            preload="metadata"
+            controls={false}
+            onClick={(e) => {
+              const v = e.currentTarget as HTMLVideoElement;
+              document
+                .querySelectorAll<HTMLVideoElement>('.videos-grid video')
+                .forEach((x) => x !== v && x.pause());
+              v.paused ? v.play() : v.pause();
+            }}
+          />
+        </div>
+      </div>
+    </div>
+
+    {/* keep your inline CSS block, just adding what we need */}
+    <style>{`
+      .video-frame{
+        aspect-ratio: 16 / 9;        /* 🔒 fixed shape for all */
+        width: 100%;
+        background:#0b1220;
+      }
+      .video-frame video{
+        width: 100%;
+        height: 100%;
+        display: block;
+        object-fit: cover;           /* fits vertical & horizontal nicely */
+        border-radius: 0;            /* card already has radius */
+      }
+      @media (max-width: 900px) {
+        .videos-grid { grid-template-columns: 1fr; gap: 12px; }
+      }
+    `}</style>
+  </div>
+</section>
 
 /* ---------- Chapter Section ---------- */
 const ChapterSection = ({ chapter, isActive, isImageRight }:{
@@ -310,7 +524,6 @@ const ChapterText = ({ title, subtitle }:{title:string;subtitle:string}) => (
     <h3 style={{ fontSize:42, fontWeight:900, marginBottom:12, lineHeight:1.2, color:'#1e293b' }}>{title}</h3>
     <p style={{ color:'#334155', lineHeight:1.8, fontSize:18, fontWeight:600, marginBottom:8 }}>{subtitle}</p>
     <p style={{ color:'#475569', lineHeight:1.75, fontSize:16, fontWeight:500 }}>
-      نص تفصيلي يمكن إضافته لاحقاً لشرح هذه المرحلة بشكل أوسع وأعمق، مع التركيز على القيمة المضافة والتأثير الإيجابي.
     </p>
   </div>
 )

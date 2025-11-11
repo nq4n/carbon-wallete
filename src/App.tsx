@@ -65,7 +65,12 @@ function AppContent() {
     if (!user || !profile) return;
 
     const fetchProfileData = async () => {
-      const { data: insights } = await supabase.rpc('get_user_stats', { p_user_id: user.id });
+      // Fetch rank from the user_rankings table
+      const { data: rankingData } = await supabase
+        .from('user_rankings')
+        .select('rank')
+        .eq('user_id', user.id)
+        .single();
       
       const { count } = await supabase
         .from('user_profiles')
@@ -80,7 +85,7 @@ function AppContent() {
         .maybeSingle();
 
       setProfileStats({
-        rank: insights?.rank ?? 0,
+        rank: rankingData?.rank ?? 0,
         totalUsers: count ?? 0,
         currentGoal: goal?.title ?? 'لم يتم تعيين هدف حالي',
       });
