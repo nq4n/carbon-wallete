@@ -171,10 +171,6 @@ export default function RewardsCenter() {
       </div>
 
       <Tabs defaultValue="rewards" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="rewards">المكافآت</TabsTrigger>
-          <TabsTrigger value="achievements">الإنجازات</TabsTrigger>
-        </TabsList>
 
         <TabsContent value="rewards" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {rewards.map((reward) => {
@@ -214,31 +210,6 @@ export default function RewardsCenter() {
                     </DialogContent>
                   </Dialog>
                 </div>
-              </Card>
-            );
-          })}
-        </TabsContent>
-
-        <TabsContent value="achievements" className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {achievements.map((achievement) => {
-            const IconComponent = iconMap[achievement.icon_name] || Award;
-            const progressPercent = achievement.target_value ? (achievement.progress / achievement.target_value) * 100 : 0;
-            return (
-              <Card key={achievement.id} className="p-4">
-                <div className="flex items-start justify-between mb-3">
-                  <div className={`p-2 rounded-lg ${achievement.completed ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}><IconComponent className="w-5 h-5" /></div>
-                  {achievement.completed ? <Badge className="bg-green-600"><CheckCircle className="w-3 h-3 ml-1" />مكتمل</Badge> : <Badge variant="outline">قيد التقدم</Badge>}
-                </div>
-                <h4 className="font-semibold mb-2">{achievement.title}</h4>
-                <p className="text-sm text-muted-foreground mb-4">{achievement.description}</p>
-                {!achievement.completed && achievement.target_value && (
-                  <div className="space-y-2 mb-4">
-                    <div className="flex justify-between text-sm"><span>التقدم</span><span>{achievement.progress} / {achievement.target_value}</span></div>
-                    <Progress value={progressPercent} className="h-2" />
-                  </div>
-                )}
-                <div className="flex items-center justify-between"><div className="flex items-center gap-2"><Award className="w-4 h-4 text-yellow-600" /><span className="text-sm font-medium">+{achievement.points_reward} نقطة</span></div>
-                  {achievement.completed && <CheckCircle className="w-5 h-5 text-green-600" />}</div>
               </Card>
             );
           })}
