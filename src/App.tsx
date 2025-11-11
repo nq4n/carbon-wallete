@@ -35,7 +35,7 @@ import {
   BarChart3,
   Gift,
   User,
-  Settings,
+  Lock,
   Bell,
   Leaf,
   GraduationCap,
@@ -243,6 +243,9 @@ function AppContent() {
                     <div><label className="text-sm text-muted-foreground">{userData.type === "student" ? "الرقم الجامعي" : "الرقم الوظيفي"}</label><p className="font-medium">{userData.id}</p></div>
                     <div><label className="text-sm text-muted-foreground">{userData.type === "student" ? "التخصص" : "القسم"}</label><p className="font-medium">{userData.department}</p></div>
                     <div><label className="text-sm text-muted-foreground">المستوى البيئي</label><Badge className="bg-green-600">{userData.level}</Badge></div>
+                    <div className="mt-6 pt-4 border-t">
+                  <Button variant="outline" className="w-full"><Lock className="w-4 h-4 ml-2" />تغير كلمة المرور</Button>
+                </div>
                   </div>
                 </div>
               </Card>
@@ -261,13 +264,12 @@ function AppContent() {
                     </div>
                     <div>
                       <label className="text-sm text-muted-foreground">الترتيب العام</label>
-                      <p className="font-semibold">#{profileStats.rank} من أصل {profileStats.totalUsers} مستخدم</p>
+                      <label className="text-2xl font-bold text-green-600">#{profileStats.rank}</label>
+                      <p className="font-semibold"> من أصل {profileStats.totalUsers} مستخدم</p>
                     </div>
                   </div>
                 </div>
-                <div className="mt-6 pt-4 border-t">
-                  <Button variant="outline" className="w-full"><Settings className="w-4 h-4 ml-2" />إعدادات الحساب</Button>
-                </div>
+                
               </Card>
             </div>
           </TabsContent>

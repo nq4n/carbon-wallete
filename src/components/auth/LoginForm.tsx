@@ -263,7 +263,6 @@ const VideosSection = () => {
                 <video
   src={src}
   playsInline
-  muted
   controls={false}
   preload="metadata"
   style={{
