@@ -16,8 +16,7 @@ import {
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { toast } from 'sonner';
-import { Eye, EyeOff, Lock, Loader2, Mail } from 'lucide-react';
-import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSeparator } from './ui/input-otp';
+import { Eye, EyeOff, Lock, Loader2, Mail, CheckCircle, Hash } from 'lucide-react';
 
 interface ChangePasswordDialogProps {
   isOpen: boolean;
@@ -26,7 +25,7 @@ interface ChangePasswordDialogProps {
 
 export default function ChangePasswordDialog({ isOpen, onOpenChange }: ChangePasswordDialogProps) {
   const { user } = useAuthContext();
-  const [step, setStep] = useState<'idle' | 'otp_sent'>('idle');
+  const [step, setStep] = useState<'idle' | 'otp_verification' | 'password_reset'>('idle');
   const [otp, setOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -42,24 +41,47 @@ export default function ChangePasswordDialog({ isOpen, onOpenChange }: ChangePas
     }
     setLoading(true);
     setError('');
-
-    // This function will now trigger the OTP email template you configured in Supabase.
     const { error } = await supabase.auth.resetPasswordForEmail(user.email);
-
     setLoading(false);
     if (error) {
       setError(`فشل إرسال الرمز: ${error.message}`);
       toast.error('فشل إرسال رمز التحقق.');
     } else {
-      setStep('otp_sent');
+      setStep('otp_verification');
       toast.success('تم إرسال رمز التحقق إلى بريدك الإلكتروني.');
     }
   };
 
-  const handlePasswordChange = async (e: React.FormEvent) => {
+  const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    if (!/^[0-9]{8}$/.test(otp)) {
+      setError('رمز التحقق يجب أن يتكون من 8 أرقام.');
+      return;
+    }
+    setLoading(true);
+    if (!user?.email) return;
 
+    const { error: verifyError } = await supabase.auth.verifyOtp({
+      email: user.email,
+      token: otp,
+      type: 'recovery',
+    });
+    setLoading(false);
+
+    if (verifyError) {
+      setError('رمز التحقق غير صالح أو منتهي الصلاحية.');
+      toast.error('رمز التحقق غير صحيح.');
+    } else {
+      toast.success('تم التحقق من الرمز بنجاح!');
+      setStep('password_reset');
+      setError('');
+    }
+  };
+
+  const handlePasswordUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
     if (newPassword.length < 6) {
       setError('يجب أن تتكون كلمة المرور من 6 أحرف على الأقل.');
       return;
@@ -68,33 +90,9 @@ export default function ChangePasswordDialog({ isOpen, onOpenChange }: ChangePas
       setError('كلمتا المرور غير متطابقتين.');
       return;
     }
-    if (!/^[0-9]{6}$/.test(otp)) {
-      setError('رمز التحقق يجب أن يتكون من 6 أرقام.');
-      return;
-    }
-
     setLoading(true);
-    if (!user?.email) return;
-
-    // First, verify the OTP
-    const { error: verifyError } = await supabase.auth.verifyOtp({
-        email: user.email,
-        token: otp,
-        type: 'recovery',
-    });
-
-    if (verifyError) {
-      setLoading(false);
-      setError('رمز التحقق غير صالح أو منتهي الصلاحية.');
-      toast.error('رمز التحقق غير صحيح.');
-      return;
-    }
-
-    // If OTP is valid, update the password
     const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
-
     setLoading(false);
-
     if (updateError) {
       setError(`حدث خطأ أثناء تحديث كلمة المرور: ${updateError.message}`);
       toast.error('فشل تغيير كلمة المرور.');
@@ -119,43 +117,45 @@ export default function ChangePasswordDialog({ isOpen, onOpenChange }: ChangePas
     onOpenChange(false);
   };
 
-  return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[425px]" dir="rtl">
-        <DialogHeader>
-          <DialogTitle>تغيير كلمة المرور</DialogTitle>
-          {step === 'idle' && (
-            <DialogDescription>
-              لأمان حسابك، سنرسل رمز تحقق إلى بريدك الإلكتروني المسجل.
-            </DialogDescription>
-          )}
-          {step === 'otp_sent' && (
-            <DialogDescription>
-              أدخل الرمز الذي أرسلناه إلى بريدك الإلكتروني وكلمة المرور الجديدة.
-            </DialogDescription>
-          )}
-        </DialogHeader>
-        
-        {step === 'otp_sent' ? (
-          <form onSubmit={handlePasswordChange} className="space-y-4 pt-4">
-            <div className="space-y-2 text-center">
-                <Label htmlFor="otp">رمز التحقق (OTP)</Label>
-                <div dir="ltr" className="flex justify-center">
-                    <InputOTP maxLength={6} value={otp} onChange={(value) => setOtp(value)}>
-                        <InputOTPGroup>
-                            <InputOTPSlot index={0} />
-                            <InputOTPSlot index={1} />
-                            <InputOTPSlot index={2} />
-                        </InputOTPGroup>
-                        <InputOTPSeparator />
-                        <InputOTPGroup>
-                            <InputOTPSlot index={3} />
-                            <InputOTPSlot index={4} />
-                            <InputOTPSlot index={5} />
-                        </InputOTPGroup>
-                    </InputOTP>
-                </div>
+  const renderContent = () => {
+    switch (step) {
+      case 'otp_verification':
+        return (
+          <form onSubmit={handleVerifyOtp} className="space-y-6 pt-4">
+            <div className="space-y-2">
+              <Label htmlFor="otp">رمز التحقق (OTP)</Label>
+              <p className="text-sm text-muted-foreground pb-2">أدخل الرمز المكون من 8 أرقام الذي أرسلناه إلى بريدك الإلكتروني.</p>
+              <div className="relative">
+                 <Input
+                  id="otp"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]{8}"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value)}
+                  placeholder="********"
+                  maxLength={8}
+                  required
+                />
+                <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              </div>
             </div>
+            {error && <p className="text-sm text-red-600 text-center">{error}</p>}
+            <DialogFooter>
+              <DialogClose asChild><Button type="button" variant="outline">إلغاء</Button></DialogClose>
+              <Button type="submit" disabled={loading}>
+                {loading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}تحقق من الرمز
+              </Button>
+            </DialogFooter>
+          </form>
+        );
+      case 'password_reset':
+        return (
+          <form onSubmit={handlePasswordUpdate} className="space-y-4 pt-4">
+             <div className="flex items-center justify-center space-x-2 text-green-600 bg-green-50 p-3 rounded-lg">
+                <CheckCircle className="h-5 w-5" />
+                <span className="text-sm font-medium">تم التحقق، يمكنك الآن تعيين كلمة مرور جديدة.</span>
+             </div>
             <div className="space-y-2">
               <Label htmlFor="new-password">كلمة المرور الجديدة</Label>
               <div className="relative">
@@ -174,26 +174,42 @@ export default function ChangePasswordDialog({ isOpen, onOpenChange }: ChangePas
                 </button>
               </div>
             </div>
-            {error && <p className="text-sm text-red-600">{error}</p>}
-             <DialogFooter>
-                <DialogClose asChild><Button type="button" variant="outline">إلغاء</Button></DialogClose>
-                <Button type="submit" disabled={loading}>
-                  {loading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
-                  تغيير كلمة المرور
-                </Button>
+            {error && <p className="text-sm text-red-600 text-center">{error}</p>}
+            <DialogFooter>
+              <DialogClose asChild><Button type="button" variant="outline">إلغاء</Button></DialogClose>
+              <Button type="submit" disabled={loading}>
+                {loading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}تحديث كلمة المرور
+              </Button>
             </DialogFooter>
           </form>
-        ) : (
+        );
+      case 'idle':
+      default:
+        return (
           <div className="flex flex-col items-center justify-center pt-8 pb-4">
-             <Mail className="w-16 h-16 text-muted-foreground/50 mb-4" />
-             <p className="text-center text-muted-foreground mb-6">انقر أدناه لإرسال رمز التحقق المكون من 6 أرقام إلى بريدك الإلكتروني.</p>
-            {error && <p className="text-sm text-red-600 mb-4">{error}</p>}
+            <Mail className="w-16 h-16 text-muted-foreground/50 mb-4" />
+            <p className="text-center text-muted-foreground mb-6">انقر أدناه لإرسال رمز تحقق مكون من 8 أرقام إلى بريدك الإلكتروني.</p>
+            {error && <p className="text-sm text-red-600 mb-4 text-center">{error}</p>}
             <Button onClick={handleSendCode} disabled={loading} className="w-full">
-              {loading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
-              إرسال رمز التحقق
+              {loading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}إرسال رمز التحقق
             </Button>
           </div>
-        )}
+        );
+    }
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent style={{ maxWidth: '425px' }} className="sm:max-w-[425px]" dir="rtl">
+        <DialogHeader>
+          <DialogTitle>تغيير كلمة المرور</DialogTitle>
+          <DialogDescription>
+            {step === 'idle' && 'أكمل الخطوة الأولى لإرسال رمز إلى بريدك الإلكتروني.'}
+            {step === 'otp_verification' && 'الخطوة الثانية: أدخل رمز التحقق.'}
+            {step === 'password_reset' && 'الخطوة الأخيرة: قم بتعيين كلمة المرور الجديدة.'}
+          </DialogDescription>
+        </DialogHeader>
+        {renderContent()}
       </DialogContent>
     </Dialog>
   );
