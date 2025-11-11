@@ -192,7 +192,7 @@ function formatTime(s) {
   const sec = Math.floor(s % 60);
   return `${m}:${sec < 10 ? "0" : ""}${sec}`;
 }
-const CARD_ASPECT = "1 / 1"; // "16 / 9" for landscape, "9 / 16" vertical
+const CARD_ASPECT = "16 / 9";// "16 / 9" for landscape, "9 / 16" vertical
 const VideosSection = () => {
   return (
     <section
@@ -261,25 +261,32 @@ const VideosSection = () => {
                 }}
               >
                 <video
-                  src={src}
-                  playsInline
-                  muted
-                  controls={false} // ✅ remove controls
-                  preload="metadata"
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    objectFit: "cover", // ✅ makes vertical videos look same height
-                    display: "block",
-                  }}
-                  onClick={(e) => {
-                    const v = e.currentTarget;
-                    document
-                      .querySelectorAll("video")
-                      .forEach((x) => x !== v && x.pause());
-                    v.paused ? v.play() : v.pause();
-                  }}
-                />
+  src={src}
+  playsInline
+  muted
+  controls={false}
+  preload="metadata"
+  style={{
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+    display: "block",
+  }}
+  onClick={(e) => {
+    const v = e.currentTarget;
+    document.querySelectorAll("video").forEach((x) => x !== v && x.pause());
+    v.paused ? v.play() : v.pause();
+  }}
+  onDoubleClick={(e) => {
+    const v = e.currentTarget as HTMLVideoElement;
+    if (!document.fullscreenElement) {
+      v.requestFullscreen?.();
+    } else {
+      document.exitFullscreen?.();
+    }
+  }}
+/>
+
               </div>
             </div>
           ))}
