@@ -93,17 +93,31 @@ export default function CarbonDashboard() {
     setActivities(formattedActivities);
   };
 
-  const loadPoints = async () => {
-    if(!user) return;
-    const { data: p } = await supabase
-      .from("user_profiles")
-      .select("points, level")
-      .eq("id", user.id)
-      .maybeSingle();
-    setPoints(p?.points ?? 0);
-    if (p) {
-      setSummary(prev => ({ ...prev, level: p.level } as CarbonData));
+  const loadDashboardSummary = async () => {
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from('user_rankings')
+      .select(`
+        rank,
+        user_profiles ( points, level )
+      `)
+      .eq('user_id', user.id)
+      .single();
+
+    if (error) {
+      console.error('Error fetching user summary:', error);
+      return;
     }
+
+    const profile = Array.isArray(data?.user_profiles) ? data.user_profiles[0] : data?.user_profiles;
+
+    setPoints(profile?.points ?? 0);
+    setSummary({
+        ...(summary as CarbonData),
+        level: profile?.level ?? '...',
+        rank: data?.rank ?? 0,
+    });
   };
 
   const loadChallenges = async () => {
@@ -154,7 +168,7 @@ export default function CarbonDashboard() {
 
   const reload = async () => {
     if (!user) return;
-    await Promise.all([loadActivities(), loadPoints(), loadChallenges()]);
+    await Promise.all([loadActivities(), loadDashboardSummary(), loadChallenges()]);
 
     const startOfDay = new Date(); startOfDay.setHours(0,0,0,0);
     const startOfWeek = new Date(); startOfWeek.setDate(startOfWeek.getDate()-startOfWeek.getDay()); startOfWeek.setHours(0,0,0,0);
@@ -195,7 +209,7 @@ export default function CarbonDashboard() {
     }
 
     if (parsedData.challenge_id != selectedChallenge.id) {
-        toast.error(`رمز QR هذا لا يتطابق مع تحدي "${selectedChallenge.title}".`);
+        toast.error(`رمز QR هذا لا يتطابق مع تحدي \"${selectedChallenge.title}\".`);
         return;
     }
 
@@ -208,7 +222,7 @@ export default function CarbonDashboard() {
       console.error("Error completing challenge:", error);
       toast.error("لم يتم إكمال التحدي. قد تكون أكملته بالفعل.");
     } else {
-      toast.success(`تهانينا! لقد أكملت تحدي "${selectedChallenge.title}" وحصلت على ${selectedChallenge.points_reward} نقطة.`);
+      toast.success(`تهانينا! لقد أكملت تحدي \"${selectedChallenge.title}\" وحصلت على ${selectedChallenge.points_reward} نقطة.`);
       await reload(); 
     }
   };
