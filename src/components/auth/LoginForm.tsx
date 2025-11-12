@@ -26,6 +26,7 @@ import womanFigure from '../../assets/photos/women_figure.png'
 import { Eye, EyeOff, Mail, Lock, User, GraduationCap, Briefcase, Loader2, AlertCircle } from 'lucide-react'
 import { useAuthContext } from './AuthProvider'
 import { toast } from 'sonner'
+import { OtpForm } from './OtpForm';
 
 /* ---------- Configuration ---------- */
 const LOGO = greenPulseLogo
