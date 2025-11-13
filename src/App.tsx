@@ -1,24 +1,10 @@
-'use client';
-
 import { useState, useEffect } from "react";
 import { supabase } from "./lib/supabase";
-import {
-  AuthProvider,
-  useAuthContext,
-} from "./components/auth/AuthProvider";
+import { AuthProvider, useAuthContext } from "./components/auth/AuthProvider";
 import LoginForm from "./components/auth/LoginForm";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "./components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
 import { Button } from "./components/ui/button";
-import {
-  Avatar,
-  AvatarImage,
-  AvatarFallback,
-} from "./components/ui/avatar";
+import { Avatar, AvatarImage, AvatarFallback } from "./components/ui/avatar";
 import { Badge } from "./components/ui/badge";
 import { Card } from "./components/ui/card";
 import CarbonDashboard from "./components/CarbonDashboard";
@@ -33,26 +19,12 @@ import EcoQuizzes from "./components/EcoQuizzes";
 import AIRecommendations from "./components/AIRecommendations";
 import ChangePasswordDialog from "./components/ChangePasswordDialog";
 import Notifications from './components/Notifications';
-import {
-  Home,
-  BarChart3,
-  Gift,
-  User,
-  Lock,
-  Bell,
-  GraduationCap,
-  Briefcase,
-  MapPin,
-  ShoppingBag,
-  BookOpen,
-  Brain,
-  Lightbulb,
-  Loader2,
-} from "lucide-react";
+import { Home, BarChart3, Gift, User, Lock, Bell, GraduationCap, Briefcase, MapPin, ShoppingBag, BookOpen, Brain, Lightbulb, Loader2 } from "lucide-react";
 import greenPulseLogo from "./assets/logo.png";
 import { ImageWithFallback } from "./components/figma/ImageWithFallback";
 import { Toaster } from './components/ui/sonner';
 import GrowingTreeBackground from "./components/auth/GrowingTreeBackground";
+import { ContactUs } from './components/auth/ContactUs';
 
 function AppContent() {
   const { user, profile, loading, signOut } = useAuthContext();
@@ -303,6 +275,7 @@ function AppContent() {
            ))}
         </div>
       </div>
+      <ContactUs />
     </div>
   );
 }

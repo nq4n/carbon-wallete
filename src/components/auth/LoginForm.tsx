@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
-import greenPulseLogo from '../../assets/logo.png';
 import { ChapterSection, CHAPTERS } from './Chapters';
 import { ActivitiesSection, VideosSection, activities } from './Media';
 import { LoginSection } from './Login';
+import { ContactUs } from './ContactUs';
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import greenPulseLogo from '../../assets/logo.png';
 
 const LOGO = greenPulseLogo;
 
@@ -171,6 +172,8 @@ export default function PreAuthShowcaseCentered() {
         <VideosSection />
 
         <LoginSection currentStage={currentStage} totalStages={CHAPTERS.length + 3} />
+        
+        <ContactUs />
       </div>
 
       <style>{`
