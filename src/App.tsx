@@ -32,6 +32,7 @@ import EcoLearningCenter from "./components/EcoLearningCenter";
 import EcoQuizzes from "./components/EcoQuizzes";
 import AIRecommendations from "./components/AIRecommendations";
 import ChangePasswordDialog from "./components/ChangePasswordDialog";
+import Notifications from './components/Notifications';
 import {
   Home,
   BarChart3,
@@ -159,7 +160,7 @@ function AppContent() {
             </div>
 
             <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon"><Bell className="w-5 h-5" /></Button>
+              <Button variant="ghost" size="icon" onClick={() => setActiveTab('notifications')}><Bell className="w-5 h-5" /></Button>
               <Button
                 variant="ghost"
                 size="sm"
@@ -220,6 +221,7 @@ function AppContent() {
           <TabsContent value="store"><GreenStore userPoints={userData.points} /></TabsContent>
           <TabsContent value="stats"><CarbonStats /></TabsContent>
           <TabsContent value="rewards"><RewardsCenter /></TabsContent>
+          <TabsContent value="notifications"><Notifications /></TabsContent>
 
           <TabsContent value="profile" className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
