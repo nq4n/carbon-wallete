@@ -101,6 +101,7 @@ function AppContent() {
     level: profile.level || "مبتدئ",
     points: profile.points,
     type: profile.user_type,
+    gender : profile.gender,
   };
 
   return (
@@ -150,7 +151,7 @@ function AppContent() {
                   </div>
                 </div>
                 <Avatar>
-                  <AvatarImage src={profile.avatar_url} />
+                  <AvatarImage src={profile.avatar_url} gender={profile.gender} />
                   <AvatarFallback>{userData.name.slice(0, 2)}</AvatarFallback>
                 </Avatar>
               </div>
@@ -201,10 +202,16 @@ function AppContent() {
                 <h3 className="font-semibold mb-4">المعلومات الشخصية</h3>
                 <div className="space-y-4">
                   <div className="flex items-center justify-center mb-6">
-                    <Avatar className="w-24 h-24">
-                      <AvatarImage src={profile?.avatar_url} />
-                      <AvatarFallback className="text-2xl">{userData.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}</AvatarFallback>
-                    </Avatar>
+                  <Avatar className="w-24 h-24">
+                  <AvatarImage src={profile?.avatar_url} gender={profile?.gender} />
+  <AvatarFallback className="text-2xl">
+    {userData.name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .slice(0, 2)}
+  </AvatarFallback>
+</Avatar>
                   </div>
                   <div className="space-y-3">
                      <div><label className="text-sm text-muted-foreground">البريد الإلكتروني</label><p className="font-medium">{user?.email}</p></div>

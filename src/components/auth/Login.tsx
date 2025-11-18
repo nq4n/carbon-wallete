@@ -1035,7 +1035,7 @@ export const LoginSection = ({ currentStage, totalStages }: { currentStage: numb
                     marginBottom: 6,
                   }}
                 >
-                  حساب تجريبي:
+                المنصة قيد التطوير 
                 </h4>
                 <p
                   style={{
@@ -1044,9 +1044,7 @@ export const LoginSection = ({ currentStage, totalStages }: { currentStage: numb
                     margin: 0,
                   }}
                 >
-                  البريد: demo@squ.edu.om
-                  <br />
-                  كلمة المرور: demo123
+                 سيتم إعلامك عند الإطلاق
                 </p>
               </div>
             </form>

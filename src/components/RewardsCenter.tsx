@@ -158,7 +158,7 @@ export default function RewardsCenter() {
     <div className="space-y-6" dir="rtl">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold">مركز المكافآت</h2>
+          <h2 className="text-xl font-semibold">مركز المكافآت -غير مفعله الأن أحتفظ بنقاطك الأن</h2>
           <p className="text-muted-foreground">استبدل نقاطك واحصل على مكافآت رائعة</p>
         </div>
         <Card className="p-4"><div className="flex items-center gap-3">
@@ -189,7 +189,7 @@ export default function RewardsCenter() {
                   <div className="flex items-center gap-2"><Coins className="w-4 h-4 text-yellow-500" /><span className="font-semibold">{reward.points_cost} نقطة</span></div>
                   <Dialog>
                     <DialogTrigger asChild>
-                      <Button size="sm" disabled={!reward.available || !canAfford}>
+                      <Button size="sm" disabled>
                         {!reward.available ? <Lock className="w-4 h-4 ml-1" /> : null}
                         {reward.available ? (canAfford ? 'استبدال' : 'نقاط غير كافية') : 'غير متاح'}
                       </Button>

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Send, Loader2, Mail, User, Youtube, Instagram } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
 
 export const ContactUs = () => {
     const [formData, setFormData] = useState({ name: '', email: '', message: '' });
@@ -20,9 +21,14 @@ export const ContactUs = () => {
         }
 
         try {
-            await new Promise(resolve => setTimeout(resolve, 1500));
+            const { error: insertError } = await supabase.from('contact_submissions').insert([
+                { name: formData.name, email: formData.email, message: formData.message },
+            ]);
 
-            console.log('Form submitted:', formData);
+            if (insertError) {
+                throw insertError;
+            }
+
             setSuccess(true);
             setFormData({ name: '', email: '', message: '' });
         } catch (err) {
