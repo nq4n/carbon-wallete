@@ -27,7 +27,7 @@ function Avatar({
 function AvatarImage({
   className,
   src,
-  gender = "male", // default gender if not provided
+
   ...props
 }: React.ComponentProps<typeof AvatarPrimitive.Image> & { gender?: "male" | "female" }) {
 
