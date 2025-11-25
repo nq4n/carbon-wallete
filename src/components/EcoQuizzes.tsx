@@ -61,7 +61,6 @@ export default function EcoQuizzes() {
   const [timeLeft, setTimeLeft] = useState(0);
   const [showExplanation, setShowExplanation] = useState(false);
 
-  // 🔒 lock to prevent double submit
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -77,7 +76,7 @@ export default function EcoQuizzes() {
       setTimeLeft(prevTime => {
         if (prevTime <= 1) {
           clearInterval(timer);
-          completeQuiz(); // guarded by isSubmitting/quizCompleted
+          completeQuiz(); 
           return 0;
         }
         return prevTime - 1;
@@ -102,13 +101,19 @@ export default function EcoQuizzes() {
     }
 
     if (user) {
-      let { data: attemptsData } = await supabase
+      let { data: attemptsData, error: attemptsError } = await supabase
         .from('user_quiz_attempts')
         .select('quiz_id, score')
         .eq('user_id', user.id);
       
-      if (attemptsData) {
-        const attemptsMap = new Map(attemptsData.map(a => [a.quiz_id, a.score]));
+      if (attemptsData && !attemptsError) {
+        const attemptsMap = new Map<number, number>();
+        for (const attempt of attemptsData) {
+            const existingScore = attemptsMap.get(attempt.quiz_id) || 0;
+            if (attempt.score > existingScore) {
+                attemptsMap.set(attempt.quiz_id, attempt.score);
+            }
+        }
         quizzesData = (quizzesData ?? []).map(quiz => ({
           ...quiz,
           completed: attemptsMap.has(quiz.id),
@@ -132,7 +137,7 @@ export default function EcoQuizzes() {
     setScore(0);
     setTimeLeft(quiz.time_limit_minutes * 60);
     setShowExplanation(false);
-    setIsSubmitting(false); // reset lock when starting
+    setIsSubmitting(false);
   };
 
   const selectAnswer = (answer: number) => setSelectedAnswers(p => ({ ...p, [currentQuestion]: answer }));
@@ -149,11 +154,10 @@ export default function EcoQuizzes() {
     }
   };
 
-  const completeQuiz = async () => {
-    // Guard against double submissions
+ const completeQuiz = async () => {
     if (!selectedQuiz || !user || quizCompleted || isSubmitting) return;
     setIsSubmitting(true);
-    setQuizCompleted(true); // lock UI instantly
+    setQuizCompleted(true);
 
     try {
       let correct = 0;
@@ -161,56 +165,77 @@ export default function EcoQuizzes() {
         if (selectedAnswers[i] === q.correct_answer_index) correct++;
       });
       const finalScore = Math.round((correct / selectedQuiz.questions.length) * 100);
-      setScore(finalScore); 
+      setScore(finalScore);
 
-      const { data: existingAttempt } = await supabase
+      const { data: existingAttempts, error: fetchError } = await supabase
         .from('user_quiz_attempts')
         .select('score')
         .eq('user_id', user.id)
-        .eq('quiz_id', selectedQuiz.id)
-        .single();
+        .eq('quiz_id', selectedQuiz.id);
 
-      const previousBestScore = existingAttempt?.score || 0;
+      if (fetchError) {
+        toast.error(`Could not verify your previous score: ${fetchError.message}`);
+        setIsSubmitting(false);
+        setQuizCompleted(false);
+        return;
+      }
+
+      const previousBestScore = existingAttempts && existingAttempts.length > 0 
+        ? Math.max(...existingAttempts.map(a => a.score)) 
+        : 0;
+        
+      const newPointsEarned = Math.round(selectedQuiz.points * (finalScore / 100));
+
+      const { error: insertError } = await supabase
+          .from('user_quiz_attempts')
+          .insert({ 
+              user_id: user.id, 
+              quiz_id: selectedQuiz.id, 
+              score: finalScore, 
+              points_earned: newPointsEarned,
+              completed_at: new Date().toISOString() 
+            });
+
+      if (insertError) {
+          toast.error(`Failed to save your new attempt: ${insertError.message}`);
+          setIsSubmitting(false);
+          setQuizCompleted(false);
+          return;
+      }
 
       if (finalScore > previousBestScore) {
         const oldPoints = Math.round(selectedQuiz.points * (previousBestScore / 100));
-        const newPoints = Math.round(selectedQuiz.points * (finalScore / 100));
-        const pointsToAdd = newPoints - oldPoints;
+        const pointsToAdd = newPointsEarned - oldPoints;
 
-        const { error: upsertError } = await supabase
-          .from('user_quiz_attempts')
-          .upsert({ user_id: user.id, quiz_id: selectedQuiz.id, score: finalScore }, { onConflict: 'user_id, quiz_id' });
-
-        if (upsertError) {
-          toast.error('Could not save your new high score.');
-        } else {
-          if (pointsToAdd > 0) {
+        if (pointsToAdd > 0) {
             const { error: rpcError } = await supabase.rpc('increment_user_points', { p_user_id: user.id, p_points: pointsToAdd });
             if (rpcError) {
               toast.error("Failed to update your total points.");
             } else {
               toast.success(`🎉 New high score! You earned ${pointsToAdd} more points.`);
-              refreshUser(); 
+              refreshUser();
             }
-          } else {
+        } else {
             toast.success(`Quiz complete! Your score: ${finalScore}%`);
-          }
-          
-          setQuizzes(quizzes.map(q => q.id === selectedQuiz.id ? { ...q, completed: true, score: finalScore } : q));
         }
+
+        setQuizzes(quizzes.map(q => q.id === selectedQuiz.id ? { ...q, completed: true, score: finalScore } : q));
+
       } else {
         toast.info(`Your score of ${finalScore}% did not beat your previous best of ${previousBestScore}%. Keep trying!`);
       }
-    }  finally {
-      // ✅ Just return to quiz list view (no redirect)
+    } catch (e: any) {
+      toast.error(`An unexpected error occurred during quiz completion: ${e.message}`);
+    } finally {
       setTimeout(() => {
         setSelectedQuiz(null);
-      }, 1500);
+        fetchQuizzesAndAttempts();
+      }, 2000);
     }    
   };
 
   const resetQuiz = () => {
-    if (isSubmitting) return; // don't allow reset mid-submit
+    if (isSubmitting) return;
     setSelectedQuiz(null);
   };
 
@@ -296,7 +321,7 @@ export default function EcoQuizzes() {
         <div className="space-y-6">
           <div>
             <h3 className="text-xl font-semibold mb-4 text-right">{currentQ.question}</h3>
-            <RadioGroup key={currentQ.id} value={selectedAnswers[currentQuestion]?.toString()} onValueChange={v => selectAnswer(parseInt(v))} className="space-y-3">
+            <RadioGroup key={currentQ.id} value={selectedAnswers[currentQuestion]?.toString() ?? ''} onValueChange={v => selectAnswer(parseInt(v))} className="space-y-3">
               {currentQ.options.map((option, index) => (
                 <div key={`${currentQ.id}-${index}`} className="flex items-center flex-row-reverse space-x-2 space-x-reverse">
                   <RadioGroupItem value={index.toString()} id={`q${currentQ.id}-o${index}`} disabled={isSubmitting || quizCompleted} />
