@@ -78,27 +78,40 @@ export const LoginSection = ({ currentStage, totalStages }: { currentStage: numb
     if (isSubmitting) return;
     setIsSubmitting(true);
     setError('');
-
+  
     const email = signUpData.email.trim().toLowerCase();
     const password = signUpData.password;
     const confirm = signUpData.confirmPassword;
-
+  
+    // ✅ allow only SQU emails for registration
+    const allowedDomains = ['squ.edu.om', 'student.squ.edu.om'];
+    const domain = email.split('@')[1] || '';
+    if (!allowedDomains.includes(domain)) {
+      setError(
+        'يمكن إنشاء حساب فقط باستخدام بريد جامعة السلطان قابوس (@squ.edu.om أو @student.squ.edu.om)'
+      );
+      setIsSubmitting(false);
+      return;
+    }
+  
     if (password !== confirm) {
       setError('كلمات المرور غير متطابقة');
       setIsSubmitting(false);
       return;
     }
+  
     if (password.length < 6) {
       setError('كلمة المرور يجب أن تكون 6 أحرف على الأقل');
       setIsSubmitting(false);
       return;
     }
+  
     if (!signUpData.department) {
       setError('يرجى اختيار الكلية أو القسم');
       setIsSubmitting(false);
       return;
     }
-
+  
     try {
       const { data, error } = await signUp(email, password, {
         name: signUpData.name.trim(),
@@ -107,6 +120,7 @@ export const LoginSection = ({ currentStage, totalStages }: { currentStage: numb
         department: signUpData.department,
         gender: signUpData.gender,
       });
+  
       if (error) {
         setError(
           (error.message || '').toLowerCase().includes('already')
@@ -116,7 +130,9 @@ export const LoginSection = ({ currentStage, totalStages }: { currentStage: numb
       } else if (data?.user) {
         toast.success('تم إنشاء الحساب بنجاح! جاري تسجيل الدخول...');
         const { error: signInError } = await signIn(email, password);
-        if (signInError) setError('حدث خطأ أثناء تسجيل الدخول التلقائي');
+        if (signInError) {
+          setError('حدث خطأ أثناء تسجيل الدخول التلقائي');
+        }
       }
     } catch (err) {
       console.error('SignUp error:', err);
@@ -125,6 +141,7 @@ export const LoginSection = ({ currentStage, totalStages }: { currentStage: numb
       setIsSubmitting(false);
     }
   };
+  
 
   return (
     <section

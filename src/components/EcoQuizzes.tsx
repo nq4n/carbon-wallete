@@ -154,86 +154,122 @@ export default function EcoQuizzes() {
     }
   };
 
- const completeQuiz = async () => {
+  const completeQuiz = async () => {
     if (!selectedQuiz || !user || quizCompleted || isSubmitting) return;
+  
     setIsSubmitting(true);
-    setQuizCompleted(true);
-
+  
     try {
+      // 1) Calculate score
       let correct = 0;
       selectedQuiz.questions.forEach((q, i) => {
         if (selectedAnswers[i] === q.correct_answer_index) correct++;
       });
-      const finalScore = Math.round((correct / selectedQuiz.questions.length) * 100);
+      const finalScore = Math.round(
+        (correct / selectedQuiz.questions.length) * 100
+      );
       setScore(finalScore);
-
+  
+      // 2) Get previous best score
       const { data: existingAttempts, error: fetchError } = await supabase
-        .from('user_quiz_attempts')
-        .select('score')
-        .eq('user_id', user.id)
-        .eq('quiz_id', selectedQuiz.id);
-
+        .from("user_quiz_attempts")
+        .select("score")
+        .eq("user_id", user.id)
+        .eq("quiz_id", selectedQuiz.id);
+  
       if (fetchError) {
-        toast.error(`Could not verify your previous score: ${fetchError.message}`);
-        setIsSubmitting(false);
-        setQuizCompleted(false);
+        console.error("fetchError", fetchError);
+        toast.error("Could not verify your previous score. Please try again.");
         return;
       }
-
-      const previousBestScore = existingAttempts && existingAttempts.length > 0 
-        ? Math.max(...existingAttempts.map(a => a.score)) 
-        : 0;
-        
-      const newPointsEarned = Math.round(selectedQuiz.points * (finalScore / 100));
-
-      const { error: insertError } = await supabase
-          .from('user_quiz_attempts')
-          .insert({ 
-              user_id: user.id, 
-              quiz_id: selectedQuiz.id, 
-              score: finalScore, 
-              points_earned: newPointsEarned,
-              completed_at: new Date().toISOString() 
-            });
-
-      if (insertError) {
-          toast.error(`Failed to save your new attempt: ${insertError.message}`);
-          setIsSubmitting(false);
-          setQuizCompleted(false);
-          return;
-      }
-
+  
+      const previousBestScore =
+        existingAttempts && existingAttempts.length > 0
+          ? Math.max(...existingAttempts.map((a) => a.score))
+          : 0;
+  
+      // 3) If this is a new high score, save it and add points
       if (finalScore > previousBestScore) {
-        const oldPoints = Math.round(selectedQuiz.points * (previousBestScore / 100));
-        const pointsToAdd = newPointsEarned - oldPoints;
-
-        if (pointsToAdd > 0) {
-            const { error: rpcError } = await supabase.rpc('increment_user_points', { p_user_id: user.id, p_points: pointsToAdd });
-            if (rpcError) {
-              toast.error("Failed to update your total points.");
-            } else {
-              toast.success(`🎉 New high score! You earned ${pointsToAdd} more points.`);
-              refreshUser();
-            }
-        } else {
-            toast.success(`Quiz complete! Your score: ${finalScore}%`);
+        const oldPoints = Math.round(
+          selectedQuiz.points * (previousBestScore / 100)
+        );
+        const newPoints = Math.round(
+          selectedQuiz.points * (finalScore / 100)
+        );
+        const pointsToAdd = newPoints - oldPoints; // 👈 DEFINED HERE
+  
+        // Save attempt (upsert – one row per user+quiz)
+        const { error: upsertError } = await supabase
+          .from("user_quiz_attempts")
+          .upsert(
+            {
+              user_id: user.id,
+              quiz_id: selectedQuiz.id,
+              score: finalScore,
+              points_earned: pointsToAdd,
+              completed_at: new Date().toISOString(),
+            },
+            { onConflict: "user_id,quiz_id" } // 👈 no space
+          );
+  
+        if (upsertError) {
+          console.error("upsertError", upsertError);
+          toast.error("Could not save your new high score.");
+          return;
         }
-
-        setQuizzes(quizzes.map(q => q.id === selectedQuiz.id ? { ...q, completed: true, score: finalScore } : q));
-
+  
+        // Update user total points only if > 0
+        if (pointsToAdd > 0) {
+          const { error: rpcError } = await supabase.rpc(
+            "increment_user_points",
+            { p_user_id: user.id, p_points: pointsToAdd }
+          );
+  
+          if (rpcError) {
+            console.error("rpcError", rpcError);
+            toast.error("Failed to update your total points.");
+          } else {
+            toast.success(
+              `🎉 New high score! You earned ${pointsToAdd} more points.`
+            );
+            refreshUser();
+          }
+        } else {
+          toast.success(`Quiz complete! Your score: ${finalScore}%`);
+        }
+  
+        // Update local quizzes list
+        setQuizzes((prev) =>
+          prev.map((q) =>
+            q.id === selectedQuiz.id
+              ? { ...q, completed: true, score: finalScore }
+              : q
+          )
+        );
       } else {
-        toast.info(`Your score of ${finalScore}% did not beat your previous best of ${previousBestScore}%. Keep trying!`);
+        // Not a new high score
+        toast.info(
+          `Your score of ${finalScore}% did not beat your previous best of ${previousBestScore}%. Keep trying!`
+        );
       }
-    } catch (e: any) {
-      toast.error(`An unexpected error occurred during quiz completion: ${e.message}`);
+  
+      setQuizCompleted(true);
+    } catch (e) {
+      console.error("completeQuiz error", e);
+      toast.error(
+        `An unexpected error occurred during quiz completion: ${
+          (e as Error).message
+        }`
+      );
     } finally {
+      setIsSubmitting(false);
       setTimeout(() => {
         setSelectedQuiz(null);
-        fetchQuizzesAndAttempts();
+        fetchQuizzesAndAttempts(); // refresh list & best scores
       }, 2000);
-    }    
+    }
   };
-
+  
   const resetQuiz = () => {
     if (isSubmitting) return;
     setSelectedQuiz(null);
