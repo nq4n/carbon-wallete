@@ -1,11 +1,37 @@
-hhhhhhhhhhhhhhhhhhhhhhhhhhhhhh
-  # المحفظة الكربونية الرقمية
+# Carbon Wallet 🌿💳
+Track your carbon footprint like a wallet: log activities, estimate CO₂e, set budgets, and see where your emissions come from.
 
-  This is a code bundle for المحفظة الكربونية الرقمية. The original project is available at https://www.figma.com/design/p5IqD3sLPcMJBKCRf1LmsV/%D8%A7%D9%84%D9%85%D8%AD%D9%81%D8%B8%D8%A9-%D8%A7%D9%84%D9%83%D8%B1%D8%A8%D9%88%D9%86%D9%8A%D8%A9-%D8%A7%D9%84%D8%B1%D9%82%D9%85%D9%8A%D8%A9.
+## What it does
+Carbon Wallet helps users:
+- Estimate CO₂e from daily actions (transport, electricity, food, purchases)
+- See totals by day/week/month
+- Set a “carbon budget” and track progress
+- Get tips to reduce footprint (optional)
+- Export reports (CSV/PDF) (optional)
 
-  ## Running the code
+## Key Features
+- ✅ Activity logging (manual + presets)
+- ✅ CO₂e calculation engine (factors per category)
+- ✅ Dashboard + charts (trends, categories, top sources)
+- ✅ Carbon budget + alerts
+- ✅ User accounts & cloud sync (optional)
+- ✅ Offline-first mode (optional)
 
-  Run `npm i` to install the dependencies.
+## How CO₂e is calculated (simple)
+Each activity maps to an emission factor:
+`CO₂e = activity_amount × emission_factor`
 
-  Run `npm run dev` to start the development server.
-  
+Examples:
+- Driving: `km × (kgCO₂e/km)`
+- Electricity: `kWh × (kgCO₂e/kWh)`
+- Food: `servings × (kgCO₂e/serving)`
+
+> Emission factors live in `/data/emission_factors.*` and can be updated per region.
+
+## Tech Stack (edit this)
+- Frontend: (React / Next.js / Flutter / etc.)
+- Backend: (Flask / Django / Node / etc.)
+- Database: (SQLite / Postgres / MongoDB / Supabase)
+- Auth: (JWT / Supabase Auth / Firebase Auth)
+
+## Project Structure
